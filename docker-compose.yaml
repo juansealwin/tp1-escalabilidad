@@ -1,0 +1,19 @@
+name: tp1-escalabilidad
+services:
+  server:
+    build: ./server
+    ports:
+      - "5672:5672"  
+    depends_on:
+      - rabbitmq
+
+  client:
+    build: ./client
+    depends_on:
+      - server
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "15672:15672"  
+      - "5672:5672"  
