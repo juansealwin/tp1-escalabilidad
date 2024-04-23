@@ -1,19 +1,26 @@
 name: tp1-escalabilidad
 services:
+  rabbitmq:
+    build:
+      context: ./rabbitmq
+    ports:
+      - "15672:15672"  
+      - "5672:5672"  
+
   server:
     build: ./server
-    ports:
-      - "5672:5672"  
+    restart: on-failure
     depends_on:
+      - rabbitmq
+    links: 
       - rabbitmq
 
   client:
     build: ./client
+    restart: on-failure
     depends_on:
-      - server
-
-  rabbitmq:
-    image: rabbitmq:3.13-management
-    ports:
-      - "15672:15672"  
-      - "5672:5672"  
+      - rabbitmq
+    links: 
+      - rabbitmq
+    volumes:
+      - ./data:/client/data
