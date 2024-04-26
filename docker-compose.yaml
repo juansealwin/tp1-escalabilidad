@@ -3,24 +3,38 @@ services:
   rabbitmq:
     build:
       context: ./rabbitmq
+      dockerfile: Dockerfile
     ports:
       - "15672:15672"  
       - "5672:5672"  
 
-  server:
-    build: ./server
-    restart: on-failure
-    depends_on:
-      - rabbitmq
-    links: 
-      - rabbitmq
-
   client:
-    build: ./client
+    build: 
+      context: ./
+      dockerfile: ./client/Dockerfile
     restart: on-failure
+    entrypoint: python3 /main.py
     depends_on:
       - rabbitmq
     links: 
       - rabbitmq
     volumes:
-      - ./data:/client/data
+      - ./data:/data
+    environment:
+      - BOOKS_DATA_FILE=data/books_data.csv
+      - BOOKS_RATING_FILE=data/Books_rating.csv
+      - LOG_LEVEL=DEBUG      
+
+  column_filter:
+    build: 
+      context: ./
+      dockerfile: ./column_filter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=DEBUG  
+      
