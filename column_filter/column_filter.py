@@ -10,7 +10,7 @@ class ColumnFilter:
         self.__init_config()
         time.sleep(10)
         self.__connect_to_rabbitmq()
-        self.__declare_queues()
+        self.__setup_queues()
 
     def __init_config(self):
         log_level = os.getenv("LOG_LEVEL", "INFO")
@@ -29,7 +29,7 @@ class ColumnFilter:
         logging.info(' [*] Connected to RabbitMQ')
         
 
-    def __declare_queues(self):
+    def __setup_queues(self):
         self.__channel = self.__connection.channel()
         self.__channel.queue_declare(queue='books_analizer_data', durable=True)
         self.__channel.basic_consume(queue='books_analizer_data', on_message_callback=self.__process_message, auto_ack=True)

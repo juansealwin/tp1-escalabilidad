@@ -12,6 +12,8 @@ class Client:
         self.config = self.__init_config()
         self.__init_log()
         time.sleep(10)
+        self.__connect_to_rabbitmq()
+        self.__setup_queues()
 
     def __init_config(self):
         """ Parse env variables or config file to find program config params"""
@@ -34,6 +36,23 @@ class Client:
         log_level = os.getenv("LOG_LEVEL", "INFO")
         init_log(log_level)
 
+    def __connect_to_rabbitmq(self):
+        logging.info(' [*] Waiting for RabbitMQ to start...')
+        while True:
+            try:
+                self.__connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
+                break
+            except pika.exceptions.AMQPConnectionError:
+                logging.info(' [!] RabbitMQ not available yet, waiting...')
+                time.sleep(1)
+
+        logging.info(' [*] Connected to RabbitMQ')
+
+    def __setup_queues(self):
+        self.__channel = self.__connection.channel()
+        self.__channel.queue_declare(queue='books_analizer_data', durable=True)
+
+
     def __send_message(self, channel, message):
         channel.basic_publish(exchange='', routing_key='books_analizer_data', body=message)
         logging.debug(f" [x] Sent '{message}'")
@@ -45,18 +64,6 @@ class Client:
         return filtered_line
 
     def process_books_data(self):
-        logging.info(' [*] Waiting for RabbitMQ to start...')
-        while True:
-            try:
-                connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
-                break
-            except pika.exceptions.AMQPConnectionError:
-                logging.info(' [!] RabbitMQ not available yet, waiting...')
-                time.sleep(2)
-
-        logging.info(' [*] Connected to RabbitMQ')
-        channel = connection.channel()
-        channel.queue_declare(queue='books_analizer_data', durable=True)
 
         file_name = self.config["books_data_file"]
 
@@ -68,7 +75,7 @@ class Client:
 
                 for line in reader:
                     msg = self.__filter_line(line)
-                    self.__send_message(channel, msg)
+                    self.__send_message(self.__channel, msg)
 
         else:
             logging.info(f' [!] File not found: {file_name}')
