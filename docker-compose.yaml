@@ -37,4 +37,17 @@ services:
       - rabbitmq
     environment:
       - LOG_LEVEL=DEBUG  
+
+  review_counter:
+    build: 
+      context: ./
+      dockerfile: ./review_counter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=DEBUG
       

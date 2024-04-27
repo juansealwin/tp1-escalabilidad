@@ -50,22 +50,22 @@ class Client:
 
     def __setup_queues(self):
         self.__channel = self.__connection.channel()
-        self.__channel.queue_declare(queue='books_analizer_data', durable=True)
+        self.__channel.queue_declare(queue='review_analizer_data', durable=True)
 
 
     def __send_message(self, channel, message):
-        channel.basic_publish(exchange='', routing_key='books_analizer_data', body=message)
+        channel.basic_publish(exchange='', routing_key='review_analizer_data', body=message)
         logging.debug(f" [x] Sent '{message}'")
 
     def __filter_line(self, line):
         # Discard fileds descripcion[1], image[3], previewLink[4], infoLink[7]
-        filtered_fields = [line[0], line[2], line[5], line[6], line[8], line[9]]
+        filtered_fields = [line[0],line[1], line[2], line[5], line[6], line[8], line[9]]
         filtered_line = ','.join(filtered_fields)
         return filtered_line
 
     def process_books_data(self):
 
-        file_name = self.config["books_data_file"]
+        file_name = self.config["books_rating_file"]
 
         if os.path.isfile(file_name):
             with open(file_name, 'r') as file:
