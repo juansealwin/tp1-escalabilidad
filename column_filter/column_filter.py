@@ -31,8 +31,8 @@ class ColumnFilter:
 
     def __setup_queues(self):
         self.__channel = self.__connection.channel()
-        self.__channel.queue_declare(queue='books_analizer_data', durable=True)
-        self.__channel.basic_consume(queue='books_analizer_data', on_message_callback=self.__process_message, auto_ack=True)
+        self.__channel.queue_declare(queue='books_data', durable=True)
+        self.__channel.basic_consume(queue='books_data', on_message_callback=self.__process_message, auto_ack=True)
 
     def __process_message(self, ch, method, properties, body):
         logging.debug(f" [x] Received {body}")
