@@ -22,21 +22,21 @@ services:
       - ./data:/data
     environment:
       - BOOKS_DATA_FILE=data/books_data.csv
-      - BOOKS_RATING_FILE=data/Books_rating.csv
+      - BOOKS_RATING_FILE=data/books_rating_reduced.csv
       - LOG_LEVEL=INFO      
 
-  column_filter:
-    build: 
-      context: ./
-      dockerfile: ./column_filter/Dockerfile
-    restart: on-failure
-    entrypoint: python3 /main.py
-    depends_on:
-      - rabbitmq
-    links: 
-      - rabbitmq
-    environment:
-      - LOG_LEVEL=DEBUG  
+  # column_filter:
+  #   build: 
+  #     context: ./
+  #     dockerfile: ./column_filter/Dockerfile
+  #   restart: on-failure
+  #   entrypoint: python3 /main.py
+  #   depends_on:
+  #     - rabbitmq
+  #   links: 
+  #     - rabbitmq
+  #   environment:
+  #     - LOG_LEVEL=DEBUG  
 
   review_counter:
     build: 
@@ -49,10 +49,12 @@ services:
     links: 
       - rabbitmq
     environment:
-      - LOG_LEVEL=DEBUG
-      - PAIR_COUNT = 3
+      - LOG_LEVEL=INFO
+      - PAIR_COUNT=2
+      - LEADER=0
+      - ID=0
 
-  review_counter_2:
+  review_counter_1:
     build: 
       context: ./
       dockerfile: ./review_counter/Dockerfile
@@ -63,23 +65,7 @@ services:
     links: 
       - rabbitmq
     environment:
-      - LOG_LEVEL=DEBUG
-      - PAIR_COUNT = 3
-
-  review_counter_3:
-    build: 
-      context: ./
-      dockerfile: ./review_counter/Dockerfile
-    restart: on-failure
-    entrypoint: python3 /main.py
-    depends_on:
-      - rabbitmq
-    links: 
-      - rabbitmq
-    environment:
-      - LOG_LEVEL=DEBUG
-      - PAIR_COUNT = 3
-
-  
-      
-      
+      - LOG_LEVEL=INFO
+      - PAIR_COUNT=2
+      - LEADER=0
+      - ID=1

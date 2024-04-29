@@ -22,7 +22,12 @@ class ReviewCounter():
     def __init_config(self):
         log_level = os.getenv("LOG_LEVEL", "INFO")
         init_log(log_level)
-        self.pair_count = int(os.getenv("PAIR_COUNT", 0))
+        self.pair_count = int(os.getenv("PAIR_COUNT", '0'))
+        self.leader = int(os.getenv("LEADER",'0'))
+
+        logging.info(self.leader)
+        self.id = int(os.getenv("ID",'0'))
+        logging.info(self.id)
 
 
     def __connect_to_rabbitmq(self):
@@ -42,10 +47,22 @@ class ReviewCounter():
         self.__channel = self.__connection.channel()
         self.__channel.queue_declare(queue='rating_data', durable=True)
         self.__channel.basic_consume(queue='rating_data', on_message_callback=self.__process_message, auto_ack=True)
-        self.__channel_finished_process=self.__connection.channel()
-        self.__channel_finished_process.queue_declare(queue='finished', durable=True)
-        self.__channel_finished_process.basic_qos(prefetch_count=1)
-        self.__channel_finished_process.basic_consume(queue='finished', on_message_callback=self.__process_finish_message)
+        self.__setup_leader_queues()
+    
+    def __setup_leader_queues(self):
+        if self.id == self.leader:
+            logging.info("Leader setting up channels")
+            self.__channel__finish = self.__connection.channel()
+            self.__channel__finish.queue_declare(queue='leader_finish')
+            self.__channel__finish.basic_consume(queue='leader_finish' , on_message_callback = self.__process_finish_message, auto_ack = True)
+        else:
+            logging.info("Setting up finish channel")
+            self.__channel__leader = self.__connection.channel()
+            self.__channel__leader.queue_declare(queue='leader_finish')
+            self.__channel__finish = self.__connection.channel()
+            self.__channel__finish.queue_declare(queue=f'leader_finish_{self.id}')
+            self.__channel__finish.basic_consume(queue=f'leader_finish_{self.id}',on_message_callback = self.__process_finish_message, auto_ack = True)
+
 
     def __process_message(self, ch, method, properties, body):
         if self.shutdown_requested:
@@ -54,15 +71,36 @@ class ReviewCounter():
         line = body.decode('utf-8')
         if line == "END":
             logging.info(f"sending ending signal to all {self.pair_count} pairs")
+            if self.id != self.leader:
+                self.__send_message(self.__channel__leader, f"END,{self.id}", 'leader_finish')
+            else:
+                self.__leader_message(self.id)
 
         fields = line.split(',')
         self.counter.setdefault(fields[self.TITLE_POS], 0)
         self.counter[fields[self.TITLE_POS]] += 1
 
-    def __process_finish_message(self):
+    def __process_finish_message(self, ch, method, properties, body):
+        line = body.decode('utf-8')
+        fields = line.split(',')
         logging.info("finished processing all messages")
-        logging.info(f"{self.counter}")
+        logging.debug(f"{self.counter}")
+        if self.id == self.leader:
+            self.__leader_message(fields[1])
+        else:
+            logging.info("Stopping processing")
 
+    def __leader_message(self,sender):
+        logging.info("Letting everyone know")
+        for i in range(0,self.pair_count):
+            if i != self.id and i!= sender:
+               actual_connection = self.__connection.channel()
+               actual_channel = actual_connection.queue_declare(queue=f'leader_finish_{i}')
+               self.__send_message(actual_connection, f"END", f'leader_finish_{i}')
+
+    def __send_message(self, channel, message, routing_key):
+        channel.basic_publish(exchange='', routing_key=routing_key, body=message)
+        logging.info(f" [x] Sent '{message}'")
 
     def handle_sigterm(self, signum, frame):
         logging.debug('action: handle_sigterm | result: in_progress')
