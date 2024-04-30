@@ -6,14 +6,28 @@ import csv
 import os
 from configparser import ConfigParser
 from common.log import init_log
+from rabbitmq.rabbit_connection import *
+from rabbitmq.rabbit_queue import *
 
 class Client:
     def __init__(self):
         self.config = self.__init_config()
         self.__init_log()
         time.sleep(10)
-        self.__connect_to_rabbitmq()
-        self.__setup_queues()
+        self.__rabbit_conn = RabbitConnection()
+        self.__rabbit_conn.connect()
+
+        # Queue to send book data
+        self.__book_data_queue = RabbitQueue(self.__rabbit_conn.connection, 'books_data')
+        self.__book_data_queue.setup_send_queue()
+
+        # Queue to send rating data
+        self.__rating_data_queue = RabbitQueue(self.__rabbit_conn.connection, 'rating_data')
+        self.__rating_data_queue.setup_send_queue()
+
+        # Queue to receive result
+        self.__result_queue = RabbitQueue(self.__rabbit_conn.connection, 'result')
+        self.__result_queue.setup_receive_queue(self.recv_result)
 
     def __init_config(self):
         """ Parse env variables or config file to find program config params"""
@@ -36,37 +50,11 @@ class Client:
         log_level = os.getenv("LOG_LEVEL", "INFO")
         init_log(log_level)
 
-    def __connect_to_rabbitmq(self):
-        logging.info(' [*] Waiting for RabbitMQ to start...')
-        while True:
-            try:
-                self.__connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
-                break
-            except pika.exceptions.AMQPConnectionError:
-                logging.info(' [!] RabbitMQ not available yet, waiting...')
-                time.sleep(1)
-
-        logging.info(' [*] Connected to RabbitMQ')
-
-    def __setup_queues(self):
-        # Queue to send book data
-        self.__channel_book_data = self.__connection.channel()
-        self.__channel_book_data.queue_declare(queue='books_data', durable=True)
-
-        # Queue to send rating data
-        self.__channel_rating_data = self.__connection.channel()
-        self.__channel_rating_data.queue_declare(queue='rating_data', durable=True)
-
-        # Queue to receive result
-        self.__channel_result = self.__connection.channel()
-        self.__channel_result.queue_declare(queue='result', durable=True)
-        self.__channel_result.basic_consume(queue='result', on_message_callback=self.__process_result)
-
     def __process_result(self, ch, method, properties, body):
         logging.info(f" [x] Received {body}")    
 
     def __send_message(self, channel, message, routing_key):
-        channel.basic_publish(exchange='', routing_key=routing_key, body=message)
+        channel.basic_publish(message)
         logging.debug(f" [x] Sent '{message}'")
 
 
@@ -102,7 +90,7 @@ class Client:
 
                 for line in reader:
                     msg = self.__filter_book_data_line(line)
-                    self.__send_message(self.__channel_book_data, msg, 'books_data')
+                    self.__send_message(self.__book_data_queue, msg, 'books_data')
 
         else:
             logging.info(f' [!] File not found: {file_name}')
@@ -119,8 +107,8 @@ class Client:
 
                 for line in reader:
                     msg = self.__filter_rating_data_line(line)
-                    self.__send_message(self.__channel_rating_data, msg, 'rating_data')
-                self.__send_message(self.__channel_rating_data, "END", 'rating_data')
+                    self.__send_message(self.__rating_data_queue, msg, 'rating_data')
+                self.__send_message(self.__rating_data_queue, "END", 'rating_data')
 
         else:
             logging.info(f' [!] File not found: {file_name}')
@@ -128,4 +116,4 @@ class Client:
         
     def recv_result(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.__channel_result.start_consuming()
+        self.__result_queue.start_consuming()

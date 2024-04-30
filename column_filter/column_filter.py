@@ -1,5 +1,7 @@
 import pika, time, logging, os
 from common.log import init_log
+from rabbitmq.rabbit_connection import *
+from rabbitmq.rabbit_queue import *
 
 class ColumnFilter:
     TITLE_POS = 0
@@ -9,30 +11,18 @@ class ColumnFilter:
     def __init__(self):
         self.__init_config()
         time.sleep(10)
-        self.__connect_to_rabbitmq()
-        self.__setup_queues()
+
+        self.__rabbit_conn = RabbitConnection()
+        self.__rabbit_conn.connect()
+        
+        # Queue to send book data
+        self.__book_data_queue = RabbitQueue(self.__rabbit_conn.connection, 'books_data')
+        self.__book_data_queue.setup_receive_queue(self.__process_message)
 
     def __init_config(self):
         log_level = os.getenv("LOG_LEVEL", "INFO")
         init_log(log_level)    
-
-    def __connect_to_rabbitmq(self):
-        logging.info(' [*] Waiting for RabbitMQ to start...')
-        while True:
-            try:
-                self.__connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
-                break
-            except pika.exceptions.AMQPConnectionError:
-                logging.info(' [!] RabbitMQ not available yet, waiting...')
-                time.sleep(1)
-
-        logging.info(' [*] Connected to RabbitMQ')
         
-
-    def __setup_queues(self):
-        self.__channel = self.__connection.channel()
-        self.__channel.queue_declare(queue='books_data', durable=True)
-        self.__channel.basic_consume(queue='books_data', on_message_callback=self.__process_message, auto_ack=True)
 
     def __process_message(self, ch, method, properties, body):
         logging.debug(f" [x] Received {body}")
@@ -71,4 +61,4 @@ class ColumnFilter:
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.__channel.start_consuming()
+        self.__book_data_queue.start_consuming()

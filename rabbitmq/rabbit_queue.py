@@ -3,18 +3,21 @@ import logging
 
 class RabbitQueue:
     def __init__(self, connection, queue_name):
-        self.connection = connection
-        self.queue_name = queue_name
-        self.channel = None
+        self.__connection = connection
+        self.__queue_name = queue_name
+        self.__channel = None
 
-    def create_send_queue(self, durable=True):
-        self.channel = self.connection.channel()
-        self.channel.queue_declare(queue=self.queue_name, durable=durable)
+    def setup_send_queue(self, durable=True):
+        self.__channel = self.__connection.channel()
+        self.__channel.queue_declare(queue=self.__queue_name, durable=durable)
 
-    def create_receive_queue(self, callback, durable=True, auto_ack=False):
-        self.channel = self.connection.channel()
-        self.channel.queue_declare(queue=self.queue_name, durable=durable)
-        self.channel.basic_consume(queue=self.queue_name, on_message_callback=callback, auto_ack=auto_ack)
+    def setup_receive_queue(self, callback, durable=True, auto_ack=False):
+        self.__channel = self.__connection.channel()
+        self.__channel.queue_declare(queue=self.__queue_name, durable=durable)
+        self.__channel.basic_consume(queue=self.__queue_name, on_message_callback=callback, auto_ack=auto_ack)
+
+    def basic_publish(self, message):
+        self.__channel.basic_publish(exchange='', routing_key=self.__queue_name, body=message)
 
     def start_consuming(self):
-        self.channel.start_consuming()
+        self.__channel.start_consuming()

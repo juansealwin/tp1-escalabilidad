@@ -16,5 +16,3 @@ class RabbitConnection:
                 logging.info(' [!] RabbitMQ not available yet, waiting...')
                 time.sleep(1)
         logging.info(' [*] Connected to RabbitMQ')
-
-        return self.connection
