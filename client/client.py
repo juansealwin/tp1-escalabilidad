@@ -70,9 +70,9 @@ class Client:
         logging.debug(f" [x] Sent '{message}'")
 
 
-    def __recv_message(self, channel, message):
-        self.__channel_result.start_consuming()
-        logging.debug(f" [x] Sent '{message}'")
+    # def __recv_message(self, channel, message):
+    #     self.__channel_result.start_consuming()
+    #     logging.debug(f" [x] Recv '{message}'")
 
     def __filter_book_data_line(self, line):
         # Books data header: 
