@@ -67,7 +67,6 @@ class ReviewCounter():
     def __process_message(self, ch, method, properties, body):
         if self.shutdown_requested:
             return
-        logging.debug(f"received {body}")
         line = body.decode('utf-8')
         if line == "END":
             logging.info(f"sending ending signal to all {self.pair_count} pairs")
@@ -79,6 +78,7 @@ class ReviewCounter():
         fields = line.split(',')
         self.counter.setdefault(fields[self.TITLE_POS], 0)
         self.counter[fields[self.TITLE_POS]] += 1
+        logging.debug(f"processed {body}")
 
     def __process_finish_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
