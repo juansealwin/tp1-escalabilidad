@@ -47,6 +47,7 @@ class ReviewCounter():
         self.__channel = self.__connection.channel()
         self.__channel.queue_declare(queue='rating_data', durable=True)
         self.__channel.basic_consume(queue='rating_data', on_message_callback=self.__process_message, auto_ack=True)
+        self.__channel.queue_declare(queue='review_counter', durable=True)
         self.__setup_leader_queues()
     
     def __setup_leader_queues(self):
@@ -67,7 +68,6 @@ class ReviewCounter():
     def __process_message(self, ch, method, properties, body):
         if self.shutdown_requested:
             return
-        logging.debug(f"received {body}")
         line = body.decode('utf-8')
         if line == "END":
             logging.info(f"sending ending signal to all {self.pair_count} pairs")
@@ -79,6 +79,7 @@ class ReviewCounter():
         fields = line.split(',')
         self.counter.setdefault(fields[self.TITLE_POS], 0)
         self.counter[fields[self.TITLE_POS]] += 1
+        logging.debug(f"processed {body}")
 
     def __process_finish_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
@@ -89,6 +90,8 @@ class ReviewCounter():
             self.__leader_message(fields[1])
         else:
             logging.info("Stopping processing")
+        
+        self.__forward_message()
 
     def __leader_message(self,sender):
         logging.info("Letting everyone know")
@@ -97,6 +100,13 @@ class ReviewCounter():
                actual_connection = self.__connection.channel()
                actual_channel = actual_connection.queue_declare(queue=f'leader_finish_{i}')
                self.__send_message(actual_connection, f"END", f'leader_finish_{i}')
+    
+    def __forward_message(self):
+        for key in self.counter.keys():
+            logging.debug(f'key')
+            self.__send_message(self.__channel, f"{key},{self.counter[key]}", 'review_counter')
+        
+        self.__send_message(self.__channel, f"END", 'review_counter')
 
     def __send_message(self, channel, message, routing_key):
         channel.basic_publish(exchange='', routing_key=routing_key, body=message)
@@ -106,7 +116,6 @@ class ReviewCounter():
         logging.debug('action: handle_sigterm | result: in_progress')
         self.shutdown_requested = True
         logging.info(f"{self.counter}")
-
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
