@@ -50,7 +50,7 @@ services:
       - rabbitmq
     environment:
       - LOG_LEVEL=DEBUG
-      - PAIR_COUNT=3
+      - PAIR_COUNT=2
       - LEADER=0
       - ID=0
 
@@ -66,14 +66,14 @@ services:
       - rabbitmq
     environment:
       - LOG_LEVEL=DEBUG
-      - PAIR_COUNT=3
+      - PAIR_COUNT=2
       - LEADER=0
       - ID=1
 
-  review_counter_2:
+  joiner:
     build: 
       context: ./
-      dockerfile: ./review_counter/Dockerfile
+      dockerfile: ./joiner/Dockerfile
     restart: on-failure
     entrypoint: python3 /main.py
     depends_on:
@@ -82,6 +82,5 @@ services:
       - rabbitmq
     environment:
       - LOG_LEVEL=DEBUG
-      - PAIR_COUNT=3
-      - LEADER=0
-      - ID=2
+      - PAIRS=2
+      - MIN_COUNT=100
