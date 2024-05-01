@@ -11,8 +11,8 @@ from rabbitmq.rabbit_queue import *
 
 class Client:
     def __init__(self):
-        self.config = self.__init_config()
         self.__init_log()
+        self.config = self.__init_config()
         time.sleep(10)
         self.__rabbit_conn = RabbitConnection()
         self.__rabbit_conn.connect()
@@ -55,7 +55,7 @@ class Client:
 
     def __send_message(self, channel, message, routing_key):
         channel.basic_publish(message)
-        logging.debug(f" [x] Sent '{message}'")
+        logging.info(f" [x] Sent '{message}'")
 
 
     # def __recv_message(self, channel, message):
@@ -80,7 +80,7 @@ class Client:
 
     def send_books_data(self):
 
-        file_name = self.config["books_rating_file"]
+        file_name = self.config["books_data_file"]
 
         if os.path.isfile(file_name):
             with open(file_name, 'r') as file:

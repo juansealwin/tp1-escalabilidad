@@ -23,6 +23,7 @@ services:
     environment:
       - BOOKS_DATA_FILE=data/books_data.csv
       - BOOKS_RATING_FILE=data/books_rating_reduced.csv
+      #- BOOKS_DATA_FILE=data/test_avg_rating.csv
       - LOG_LEVEL=INFO      
 
   # column_filter:
@@ -84,3 +85,15 @@ services:
       - LOG_LEVEL=DEBUG
       - PAIRS=2
       - MIN_COUNT=100
+  # avg_rating:
+  #   build: 
+  #     context: ./
+  #     dockerfile: ./avg_rating/Dockerfile
+  #   restart: on-failure
+  #   entrypoint: python3 /main.py
+  #   depends_on:
+  #     - rabbitmq
+  #   links: 
+  #     - rabbitmq
+  #   environment:
+  #     - LOG_LEVEL=INFO

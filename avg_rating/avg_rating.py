@@ -10,6 +10,7 @@ class AvgRating:
     TITLE_POS = 0
     TOT_REVIEWS_POS = 1
     TOT_SCORE_POS = 2 
+    TOP_PERCENTILE = 0.1
 
     def __init__(self):
         self._init_config()
@@ -19,7 +20,7 @@ class AvgRating:
         self.rabbit_conn.connect()
         
         # Queue to receive rating data
-        self.rating_data_queue = RabbitQueue(self.rabbit_conn.connection, 'rating_data')
+        self.rating_data_queue = RabbitQueue(self.rabbit_conn.connection, 'avg_rating_data')
         self.rating_data_queue.setup_receive_queue(self._process_message)
 
         # Queue to send result
@@ -36,7 +37,7 @@ class AvgRating:
 
 
     def _process_message(self, ch, method, properties, body):
-        logging.debug(f" [x] Received {body}")
+        logging.info(f" [x] Received {body}")
 
         line = body.decode('utf-8')
 
@@ -83,13 +84,30 @@ class AvgRating:
 
 
     def _send_result(self):
-        for title, ratio in self.titles_rating:
-            msg = f"{title},{ratio}"
-            self.result_queue.basic_publish(msg) 
+
+        if self.fixed_result:
+            self._send_result_fixed()
+        
+        else:
+            self._send_result_percentage()
 
         self.titles_rating = []
         self.fixed_result = None
-        
+
+    def _send_result_fixed(self):
+        for title, ratio in self.titles_rating:
+            msg = f"{title},{ratio}"
+            logging.info(f"Send fixed {msg}")
+            self.result_queue.basic_publish(msg) 
+
+    def _send_result_percentage(self):
+        top_percent = int(len(self.titles_rating) * self.TOP_PERCENTILE)
+        top_titles = self.titles_rating[:top_percent]
+
+        for title, ratio in top_titles:
+            msg = f"{title},{ratio}"
+            logging.info(f"Send percent {msg}")
+            self.result_queue.basic_publish(msg) 
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
