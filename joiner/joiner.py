@@ -52,6 +52,7 @@ class Joiner:
     def __process_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
         fields = line.split(',')
+        logging.debug(f" [x] Received {body}")
         
         if line == 'END':
             self.finished_pairs +=1
@@ -61,7 +62,7 @@ class Joiner:
             return
 
         self.counter.setdefault(fields[self.TITLE_POS],[0,0])
-        self.counter[fields[self.TITLE_POS]][self.COUNT_POS] += int(fields[self.COUNT_POS])
+        self.counter[fields[self.TITLE_POS]][0] += int(fields[self.COUNT_POS])
         ### agregar contador para rating
     
     def __process_books(self):

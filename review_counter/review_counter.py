@@ -53,17 +53,15 @@ class ReviewCounter():
     def __setup_leader_queues(self):
         if self.id == self.leader:
             logging.info("Leader setting up channels")
-            self.__channel__finish = self.__connection.channel()
-            self.__channel__finish.queue_declare(queue='leader_finish')
-            self.__channel__finish.basic_consume(queue='leader_finish' , on_message_callback = self.__process_finish_message, auto_ack = True)
+            self.__channel.queue_declare(queue='leader_finish')
+            self.__channel.basic_consume(queue='leader_finish' , on_message_callback = self.__process_finish_message, auto_ack = True)
         else:
             logging.info("Setting up finish channel")
-            self.__channel__leader = self.__connection.channel()
-            self.__channel__leader.queue_declare(queue='leader_finish')
-            self.__channel__finish = self.__connection.channel()
-            self.__channel__finish.queue_declare(queue=f'leader_finish_{self.id}')
-            self.__channel__finish.basic_consume(queue=f'leader_finish_{self.id}',on_message_callback = self.__process_finish_message, auto_ack = True)
-
+            self.__channel.queue_declare(queue='leader_finish')
+            self.__channel = self.__connection.channel()
+            self.__channel.queue_declare(queue=f'leader_finish_{self.id}', durable=True)
+            self.__channel.basic_consume(queue=f'leader_finish_{self.id}',on_message_callback = self.__process_finish_message, auto_ack = True)
+            
 
     def __process_message(self, ch, method, properties, body):
         if self.shutdown_requested:
@@ -72,9 +70,13 @@ class ReviewCounter():
         if line == "END":
             logging.info(f"sending ending signal to all {self.pair_count} pairs")
             if self.id != self.leader:
-                self.__send_message(self.__channel__leader, f"END,{self.id}", 'leader_finish')
+                self.__send_message(self.__channel, f"END,{self.id}", 'leader_finish')
+                self.__forward_message()
+                return
             else:
                 self.__leader_message(self.id)
+                self.__forward_message()
+                return
 
         fields = line.split(',')
         self.counter.setdefault(fields[self.TITLE_POS], 0)
@@ -98,7 +100,7 @@ class ReviewCounter():
         for i in range(0,self.pair_count):
             if i != self.id and i!= sender:
                actual_connection = self.__connection.channel()
-               actual_channel = actual_connection.queue_declare(queue=f'leader_finish_{i}')
+               actual_channel = actual_connection.queue_declare(queue=f'leader_finish_{i}',durable=True)
                self.__send_message(actual_connection, f"END", f'leader_finish_{i}')
     
     def __forward_message(self):
@@ -120,3 +122,4 @@ class ReviewCounter():
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
         self.__channel.start_consuming()
+        

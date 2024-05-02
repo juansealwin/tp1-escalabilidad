@@ -1,5 +1,6 @@
 import pika
 import logging
+import time
 
 class RabbitConnection:
     def __init__(self, host='rabbitmq'):

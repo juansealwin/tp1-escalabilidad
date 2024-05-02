@@ -66,7 +66,7 @@ class Client:
         # Books data header: 
         # 'Title,description,authors,image,previewLink,publisher,publishedDate,infoLink,categories,ratingsCount'
         # Discard fileds descripcion[1], image[3], previewLink[4], infoLink[7]
-        filtered_fields = [line[0],line[1], line[2], line[5], line[6], line[8], line[9]]
+        filtered_fields = [line[0], line[2], line[5], line[6], line[8], line[9]]
         filtered_line = ','.join(filtered_fields)
         return filtered_line
 
@@ -80,7 +80,7 @@ class Client:
 
     def send_books_data(self):
 
-        file_name = self.config["books_rating_file"]
+        file_name = self.config["books_data_file"]
 
         if os.path.isfile(file_name):
             with open(file_name, 'r') as file:
