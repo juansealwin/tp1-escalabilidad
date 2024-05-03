@@ -1,5 +1,9 @@
+import csv
+from io import StringIO
 import pika, time, logging, os
 from common.log import init_log
+from rabbitmq.rabbit_connection import *
+from rabbitmq.rabbit_queue import *
 
 class ColumnFilter:
     TITLE_POS = 0
@@ -9,30 +13,20 @@ class ColumnFilter:
     def __init__(self):
         self.__init_config()
         time.sleep(10)
-        self.__connect_to_rabbitmq()
-        self.__setup_queues()
+
+        self.__rabbit_conn = RabbitConnection()
+        self.__rabbit_conn.connect()
+        
+        # Queue to send book data
+        self.__book_data_queue = RabbitQueue(self.__rabbit_conn.connection, 'books_data')
+        self.__book_data_queue.setup_receive_queue(self.__process_message)
+        self.__book_joiner = RabbitQueue(self.__rabbit_conn.connection, 'book_joiner')
+        self.__book_joiner.setup_send_queue()
 
     def __init_config(self):
         log_level = os.getenv("LOG_LEVEL", "INFO")
         init_log(log_level)    
-
-    def __connect_to_rabbitmq(self):
-        logging.info(' [*] Waiting for RabbitMQ to start...')
-        while True:
-            try:
-                self.__connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
-                break
-            except pika.exceptions.AMQPConnectionError:
-                logging.info(' [!] RabbitMQ not available yet, waiting...')
-                time.sleep(1)
-
-        logging.info(' [*] Connected to RabbitMQ')
         
-
-    def __setup_queues(self):
-        self.__channel = self.__connection.channel()
-        self.__channel.queue_declare(queue='books_data', durable=True)
-        self.__channel.basic_consume(queue='books_data', on_message_callback=self.__process_message, auto_ack=True)
 
     def __process_message(self, ch, method, properties, body):
         logging.debug(f" [x] Received {body}")
@@ -40,35 +34,63 @@ class ColumnFilter:
         # Decode the msg
         line = body.decode('utf-8')
 
-        fields = line.split(',')
-
-        # Check category
-        if not 'Computers' in fields[self.CATEGORY_POS]:
+        fields = next(csv.reader(StringIO(line)))
+        try:
+            publisher_date_field = fields[self.PUBLISHER_DATE_POS]
+            logging.debug(f"DATE : {publisher_date_field}")
+        except:
             return
-
-        # Check publisher date
-        publisher_date_field = fields[self.PUBLISHER_DATE_POS]
+            pass
         try:
             year = int(publisher_date_field)
-            if not 2000 <= year <= 2023:
+            if not 1990 <= year <= 1999:
                 return
-
-        except ValueError:
+        except:
             # Format #yyyy-mm-dd
             parts = publisher_date_field.split('-')
             if len(parts) > 0:
                 try:
                     year = int(parts[0])
-                    if not 2000 <= year <= 2023:
+                    if not 1990 <= year <= 1999:
+                        logging.debug("sending to next")
                         return
 
                 except ValueError:
                     pass
+        
+        self.__send_message(self.__book_joiner, fields[self.TITLE_POS], 'book_joiner')
 
-        # Check title
-        if 'distributed' in fields[self.TITLE_POS].lower():
-            logging.debug(f"All validations checked: {line}")
+        # Check category
+        # if not 'Computers' in fields[self.CATEGORY_POS]:
+        #     return
+
+        # # Check publisher date
+        # publisher_date_field = fields[self.PUBLISHER_DATE_POS]
+        # try:
+        #     year = int(publisher_date_field)
+        #     if not 2000 <= year <= 2023:
+        #         return
+
+        # except ValueError:
+        #     # Format #yyyy-mm-dd
+        #     parts = publisher_date_field.split('-')
+        #     if len(parts) > 0:
+        #         try:
+        #             year = int(parts[0])
+        #             if not 2000 <= year <= 2023:
+        #                 return
+
+        #         except ValueError:
+        #             pass
+
+        # # Check title
+        # if 'distributed' in fields[self.TITLE_POS].lower():
+        #     logging.debug(f"All validations checked: {line}")
+
+    def __send_message(self, channel, message, routing_key):
+        channel.basic_publish(message)
+        logging.debug(f" [x] Sent '{message}'")
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.__channel.start_consuming()
+        self.__book_data_queue.start_consuming()

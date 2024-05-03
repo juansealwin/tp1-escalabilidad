@@ -22,13 +22,27 @@ services:
       - ./data:/data
     environment:
       - BOOKS_DATA_FILE=data/books_data.csv
-      - BOOKS_RATING_FILE=data/Books_rating.csv
-      - LOG_LEVEL=DEBUG      
+      - BOOKS_RATING_FILE=data/books_rating_reduced.csv
+      #- BOOKS_DATA_FILE=data/test_avg_rating.csv
+      - LOG_LEVEL=INFO      
 
-  column_filter:
+  # column_filter:
+  #   build: 
+  #     context: ./
+  #     dockerfile: ./column_filter/Dockerfile
+  #   restart: on-failure
+  #   entrypoint: python3 /main.py
+  #   depends_on:
+  #     - rabbitmq
+  #   links: 
+  #     - rabbitmq
+  #   environment:
+  #     - LOG_LEVEL=DEBUG  
+
+  review_counter:
     build: 
       context: ./
-      dockerfile: ./column_filter/Dockerfile
+      dockerfile: ./review_counter/Dockerfile
     restart: on-failure
     entrypoint: python3 /main.py
     depends_on:
@@ -36,5 +50,65 @@ services:
     links: 
       - rabbitmq
     environment:
-      - LOG_LEVEL=DEBUG  
-      
+      - LOG_LEVEL=DEBUG
+      - PAIR_COUNT=3
+      - LEADER=0
+      - ID=0
+
+  review_counter_1:
+    build: 
+      context: ./
+      dockerfile: ./review_counter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=DEBUG
+      - PAIR_COUNT=3
+      - LEADER=0
+      - ID=1
+
+  review_counter_2:
+    build: 
+      context: ./
+      dockerfile: ./review_counter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=DEBUG
+      - PAIR_COUNT=3
+      - LEADER=0
+      - ID=2
+  joiner:
+    build: 
+      context: ./
+      dockerfile: ./joiner/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=DEBUG
+      - PAIRS=3
+      - MIN_COUNT=100
+  # avg_rating:
+  #   build: 
+  #     context: ./
+  #     dockerfile: ./avg_rating/Dockerfile
+  #   restart: on-failure
+  #   entrypoint: python3 /main.py
+  #   depends_on:
+  #     - rabbitmq
+  #   links: 
+  #     - rabbitmq
+  #   environment:
+  #     - LOG_LEVEL=INFO
