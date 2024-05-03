@@ -16,7 +16,7 @@ class RabbitQueue:
         self.__channel.queue_declare(queue=self.__queue_name, durable=durable)
         self.__channel.basic_consume(queue=self.__queue_name, on_message_callback=callback, auto_ack=auto_ack)
 
-    def basic_publish(self, message):
+    def send_message(self, message):
         self.__channel.basic_publish(exchange='', routing_key=self.__queue_name, body=message)
 
     def start_consuming(self):
