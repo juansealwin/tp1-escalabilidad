@@ -57,6 +57,9 @@ class Client:
         channel.basic_publish(message)
         logging.info(f" [x] Sent '{message}'")
 
+        # Queue to send rating data
+        self.__channel_rating_data = self.__connection.channel()
+        self.__channel_rating_data.queue_declare(queue='rating_data', durable=True)
 
     # def __recv_message(self, channel, message):
     #     self.__channel_result.start_consuming()
