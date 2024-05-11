@@ -3,5 +3,6 @@ RUN pip install --upgrade pip && pip3 install pika
 
 COPY review_counter /
 COPY common /common
+COPY rabbitmq /rabbitmq
 
 CMD ["python", "./main.py"]
