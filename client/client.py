@@ -6,28 +6,25 @@ import csv
 import os
 from configparser import ConfigParser
 from common.log import init_log
-from rabbitmq.rabbit_connection import *
-from rabbitmq.rabbit_queue import *
+from rabbitmq.queue_manager import *
 
 class Client:
     def __init__(self):
         self.__init_log()
         self.config = self.__init_config()
         time.sleep(10)
-        self.__rabbit_conn = RabbitConnection()
-        self.__rabbit_conn.connect()
 
-        # Queue to send book data
-        self.__book_data_queue = RabbitQueue(self.__rabbit_conn.connection, 'books_data')
-        self.__book_data_queue.setup_send_queue()
+        self.queue_manager = QueueManager()
 
-        # Queue to send rating data
-        self.__rating_data_queue = RabbitQueue(self.__rabbit_conn.connection, 'rating_data')
-        self.__rating_data_queue.setup_send_queue()
+        # Queue to send books_data
+        self.queue_manager.setup_send_queue('books_data')
+        # Queue to send rating_data
+        self.queue_manager.setup_send_queue('rating_data')
 
         # Queue to receive result
-        self.__result_queue = RabbitQueue(self.__rabbit_conn.connection, 'result')
-        self.__result_queue.setup_receive_queue(self.__process_result)
+        self.queue_manager.setup_receive_queue('result', self.__process_result)
+
+
 
     def __init_config(self):
         """ Parse env variables or config file to find program config params"""
@@ -57,11 +54,6 @@ class Client:
             logging.info("Received END message. Exiting...")
             os._exit(0)
 
-    def __send_message(self, channel, message, routing_key):
-        channel.basic_publish(message)
-        #logging.info(f" [x] Sent '{message}'")
-
-
     def __filter_book_data_line(self, line):
         # Books data header: 
         # 'Title,description,authors,image,previewLink,publisher,publishedDate,infoLink,categories,ratingsCount'
@@ -89,13 +81,13 @@ class Client:
                 next(reader)
 
                 # TODO: get from env or file
-                self.__book_data_queue.send_message("Query1")
+                self.queue_manager.send_message('books_data', "Query1")
 
                 for line in reader:
                     msg = self.__filter_book_data_line(line)
-                    self.__book_data_queue.send_message(msg)
+                    self.queue_manager.send_message('books_data', msg)
 
-                self.__book_data_queue.send_message("END") 
+                self.queue_manager.send_message('books_data', "END") 
 
         else:
             logging.info(f' [!] File not found: {file_name}')
@@ -112,8 +104,8 @@ class Client:
 
                 for line in reader:
                     msg = self.__filter_rating_data_line(line)
-                    self.__rating_data_queue.send_message(msg)
-                self.__rating_data_queue.send_message("END")
+                    self.queue_manager.send_message('rating_data', msg)
+                self.queue_manager.send_message('rating_data', "END")
 
         else:
             logging.info(f' [!] File not found: {file_name}')
@@ -121,4 +113,4 @@ class Client:
         
     def recv_result(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.__result_queue.start_consuming()
+        self.queue_manager.start_consuming('result')

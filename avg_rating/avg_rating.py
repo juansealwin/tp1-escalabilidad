@@ -3,8 +3,7 @@ import time
 import logging
 import os
 from common.log import init_log
-from rabbitmq.rabbit_connection import RabbitConnection
-from rabbitmq.rabbit_queue import RabbitQueue
+from rabbitmq.queue_manager import QueueManager
 
 class AvgRating:
     TITLE_POS = 0
@@ -15,18 +14,15 @@ class AvgRating:
     def __init__(self):
         self._init_config()
         time.sleep(10)
-
-        self.rabbit_conn = RabbitConnection()
-        self.rabbit_conn.connect()
         
+        self.queue_manager = QueueManager()
+
         # Queue to receive rating data
-        self.rating_data_queue = RabbitQueue(self.rabbit_conn.connection, 'avg_rating_data')
-        self.rating_data_queue.setup_receive_queue(self._process_message)
+        self.queue_manager.setup_receive_queue('avg_rating_data', self._process_message)
 
         # Queue to send result
-        self.result_queue = RabbitQueue(self.rabbit_conn.connection, 'result_data')
-        self.result_queue.setup_send_queue()
-
+        self.queue_manager.setup_send_queue('result_data')
+        
         self.titles_rating = []
         self.fixed_result = None
         
@@ -98,7 +94,7 @@ class AvgRating:
         for title, ratio in self.titles_rating:
             msg = f"{title},{ratio}"
             logging.info(f"Send fixed {msg}")
-            self.result_queue.basic_publish(msg) 
+            self.queue_manager.send_message('result', msg) 
 
     def _send_result_percentage(self):
         top_percent = int(len(self.titles_rating) * self.TOP_PERCENTILE)
@@ -107,8 +103,8 @@ class AvgRating:
         for title, ratio in top_titles:
             msg = f"{title},{ratio}"
             logging.info(f"Send percent {msg}")
-            self.result_queue.basic_publish(msg) 
+            self.queue_manager.send_message('result', msg) 
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.rating_data_queue.start_consuming()
+        self.queue_manager.start_consuming('avg_rating_data')

@@ -1,8 +1,7 @@
 import pika, time, logging, os
 from common.log import init_log
 from common.protocol import QueryType
-from rabbitmq.rabbit_connection import *
-from rabbitmq.rabbit_queue import *
+from rabbitmq.queue_manager import *
 
 
 class ColumnFilter:
@@ -14,16 +13,14 @@ class ColumnFilter:
         self.__init_config()
         time.sleep(10)
 
-        self.__rabbit_conn = RabbitConnection()
-        self.__rabbit_conn.connect()
-        
-        # Queue to receive book data
-        self.__book_data_queue = RabbitQueue(self.__rabbit_conn.connection, 'books_data')
-        self.__book_data_queue.setup_receive_queue(self.__process_message)
+        self.queue_manager = QueueManager()
 
-        # Queue to send result to Query1
-        self.__result_queue = RabbitQueue(self.__rabbit_conn.connection, 'result')
-        self.__result_queue.setup_send_queue()
+
+        # Queue to receive result
+        self.queue_manager.setup_receive_queue('books_data', self.__process_message)
+
+        # Queue to send book_data
+        self.queue_manager.setup_send_queue('result')
 
         self.current_processing = None
 
@@ -53,7 +50,7 @@ class ColumnFilter:
             
         # TODO: change for each type of query    
         elif line == "END":
-            self.__result_queue.send_message("END")
+            self.queue_manager.send_message('result', "END")
 
         else: 
             fields = line.split('|')
@@ -98,7 +95,7 @@ class ColumnFilter:
         if 'distributed' in fields[self.TITLE_POS].lower():
             logging.info(f"Send book: {fields}")
             result_line = ','.join(fields)
-            self.__result_queue.send_message(result_line)
+            self.queue_manager.send_message('result', result_line)
 
     # TODO
     def __process_message_query2(fields):
@@ -138,4 +135,4 @@ class ColumnFilter:
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.__book_data_queue.start_consuming()
+        self.queue_manager.start_consuming('books_data')
