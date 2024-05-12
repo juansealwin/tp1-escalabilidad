@@ -81,7 +81,7 @@ class Client:
                 next(reader)
 
                 # TODO: get from env or file
-                self.queue_manager.send_message('books_data', "Query1")
+                self.queue_manager.send_message('books_data', "Query2")
 
                 for line in reader:
                     msg = self.__filter_book_data_line(line)

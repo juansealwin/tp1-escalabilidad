@@ -1,12 +1,16 @@
+import multiprocessing
+import threading
 import time
 import os
 import pika
 import logging
 import signal
 from common.log import init_log
+from rabbitmq.queue_manager import *
 
 class Joiner:
     TITLE_POS = 0
+    AUTHOR_POS = 1
     COUNT_POS = 1
     RATING_POS = 2
 
@@ -14,10 +18,12 @@ class Joiner:
         self.counter = {}
         self.__init_config()
         time.sleep(10)
-        self.__connect_to_rabbitmq()
+        self.queue_manager = QueueManager()
         self.__setup_queues()
+
         self.shutdown_requested = False
         self.queue_type = 3
+        self.event = multiprocessing.Event()
 
     def __init_config(self):
         log_level = os.getenv("LOG_LEVEL", "INFO")
@@ -26,33 +32,16 @@ class Joiner:
         self.finished_pairs = 0
         init_log(log_level)
 
-
-    def __connect_to_rabbitmq(self):
-        logging.info(' [*] Waiting for RabbitMQ to start...')
-        while True:
-            try:
-                self.__connection = pika.BlockingConnection(
-                    pika.ConnectionParameters(host='rabbitmq'))
-                break
-            except pika.exceptions.AMQPConnectionError:
-                logging.info(' [!] RabbitMQ not available yet, waiting...')
-                time.sleep(1)
-
-        logging.info(' [*] Connected to RabbitMQ')
         
     def __setup_queues(self):
-        self.__channel_result = self.__connection.channel()
-        self.__channel_result.queue_declare(queue='result', durable=True)
-        self.__channel_counter = self.__connection.channel()
-        self.__channel_counter.queue_declare(queue='review_counter',durable=True)
-        self.__channel_counter.queue_declare(queue='book_joiner', durable=True)
-        self.__channel_counter.basic_consume(queue='review_counter', on_message_callback = self.__process_message, auto_ack=True)
+        self.queue_manager.setup_receive_queue('review_counter', callback=self.__process_message, auto_ack=True, durable=True)
+        self.queue_manager.setup_send_queue('result', durable=True)
 
 
     def __process_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
-        fields = line.split(',')
-        logging.debug(f" [x] Received {body}")
+        fields = line.split('|')
+        logging.debug(f" [x] Received {fields}")
         
         if line == 'END':
             self.finished_pairs +=1
@@ -66,11 +55,12 @@ class Joiner:
         ### agregar contador para rating
     
     def __process_books(self):
-        self.__channel_counter.basic_consume(queue='book_joiner', on_message_callback = self.__process_book_message, auto_ack=True)
+        logging.debug("Start book analyzer")
+        self.event.set()
 
     def __process_book_message(self,ch, method, properties, body):
         line = body.decode('utf-8')
-        fields = line.split(',')
+        fields = line.split('|')
         logging.info(f" [x] Received {body}")
         
         if line == 'END':
@@ -79,15 +69,25 @@ class Joiner:
             return
         
         if self.queue_type == 3:
-            if self.counter[fields[self.COUNT_POS]][0] >= self.min_count:
-                self.__send_message(self.__channel_result, f"{fields[self.COUNT_POS]}", 'result')
-
-    def __send_message(self, channel, message, routing_key):
-        channel.basic_publish(exchange='', routing_key=routing_key, body=message)
-        logging.info(f" [x] Sent '{message}'")
+            if self.counter.get(fields[self.TITLE_POS], [0])[0] >= self.min_count:
+                self.queue_manager.send_message('result', f'found {fields[self.TITLE_POS]}')
     
+
+    def consume_books(self):
+        logging.debug("request book")
+        self.event.wait()
+        logging.debug("aquired book")
+        self.new_queueManager= QueueManager()
+        self.new_queueManager.setup_receive_queue('book_joiner', callback=self.__process_book_message,auto_ack=True, durable=True)
+        logging.debug("setted up queue for book")
+        self.new_queueManager.start_consuming('book_joiner')
+            
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.__channel_counter.start_consuming()
+        self.review_counter = multiprocessing.Process(target=self.queue_manager.start_consuming,args=('review_counter',))
+        self.review_counter.start()
+        self.books = multiprocessing.Process(target=self.consume_books)
+        self.books.start()
+
 
 

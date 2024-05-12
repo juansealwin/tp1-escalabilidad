@@ -38,6 +38,7 @@ class QueueManager:
             self.channel.queue_declare(queue_name,durable=durable)
             self.channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=auto_ack)
         else:
+            logging.debug("creating new channel")
             channel = self.connection.channel()
             channel.queue_declare(queue=queue_name, durable=durable)
             channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=auto_ack)
@@ -58,8 +59,17 @@ class QueueManager:
 
     def start_consuming(self, queue_name):
         channel = self.channels.get(queue_name)
+        logging.debug(f'{channel}')
         if channel:
+            logging.info(f'start consuming queue "{queue_name}"')
             channel.start_consuming()
+        else:
+            logging.error(f'start_consuming: Queue "{queue_name}" not found.')
+
+    def stop_consuming(self, queue_name):
+        channel = self.channels.get(queue_name)
+        if channel:
+            channel.stop_consuming()
         else:
             logging.error(f'start_consuming: Queue "{queue_name}" not found.')
 

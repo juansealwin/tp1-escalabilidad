@@ -74,23 +74,26 @@ class ReviewCounter():
         self.__forward_message()
 
     def __leader_message(self,sender):
-        logging.info("Letting everyone know")
+        sender = int(sender)
+        logging.info(f"Letting everyone know, sender was {sender}")
         for i in range(0,self.pair_count):
             if i != self.id and i!= sender:
+                logging.info(f"Sending to {i}")
                 self.queue_manager.setup_send_queue(f'leader_finish_{i}',durable=True)
                 self.queue_manager.send_message(f'leader_finish_{i}',f"END")
     
     def __forward_message(self):
-        logging.info(f"{self.counter}")
+        logging.info("forwarding messages")
         for key in self.counter.keys():
-            self.queue_manager.send_message('review_counter',f"{key},{self.counter[key]}")
+            self.queue_manager.send_message('review_counter',f"{key}|{self.counter[key]}")
         
+        self.counter = {}
+        logging.info(f"sending end signal")
         self.queue_manager.send_message('review_counter',f"END")
 
     def handle_sigterm(self, signum, frame):
         logging.debug('action: handle_sigterm | result: in_progress')
         self.shutdown_requested = True
-        logging.info(f"{self.counter}")
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
