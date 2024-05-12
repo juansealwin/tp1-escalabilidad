@@ -12,7 +12,7 @@ class AvgRating:
     TOP_PERCENTILE = 0.1
 
     def __init__(self):
-        self._init_config()
+        init_log() 
         time.sleep(10)
         
         self.queue_manager = QueueManager()
@@ -25,11 +25,7 @@ class AvgRating:
         
         self.titles_rating = []
         self.fixed_result = None
-        
-
-    def _init_config(self):
-        log_level = os.getenv("LOG_LEVEL", "INFO")
-        init_log(log_level)    
+         
 
 
     def _process_message(self, ch, method, properties, body):

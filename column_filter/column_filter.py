@@ -10,7 +10,7 @@ class ColumnFilter:
     CATEGORY_POS = 4 
 
     def __init__(self):
-        self.__init_config()
+        init_log()  
         time.sleep(10)
 
         self.queue_manager = QueueManager()
@@ -22,17 +22,13 @@ class ColumnFilter:
         # Queue to send book_data
         self.queue_manager.setup_send_queue('result')
 
-        self.current_processing = None
-
-    def __init_config(self):
-        log_level = os.getenv("LOG_LEVEL", "INFO")
-        init_log(log_level)    
+        self.current_query_type = None
         
 
-    def __set_current_processing(self, line):
+    def __set_current_query_type(self, line):
         for query_type in QueryType:
             if line == query_type.value:
-                self.current_processing = query_type
+                self.current_query_type = query_type
                 return
             else:
                 logging.info(f"line {line}, query_type {query_type}...")    
@@ -45,8 +41,8 @@ class ColumnFilter:
         # Decode the msg
         line = body.decode('utf-8')
 
-        if self.current_processing is None:
-            self.__set_current_processing(line)
+        if self.current_query_type is None:
+            self.__set_current_query_type(line)
             
         # TODO: change for each type of query    
         elif line == "END":
@@ -55,13 +51,14 @@ class ColumnFilter:
         else: 
             fields = line.split('|')
 
-            if self.current_processing == QueryType.QUERY1:
+            if self.current_query_type == QueryType.QUERY1:
                 self.__process_message_query1(fields)
-            elif self.current_processing == QueryType.QUERY2:
+            elif self.current_query_type == QueryType.QUERY2:
                 self.__process_message_query2(fields)
-            elif self.current_processing == QueryType.QUERY3:
+            elif self.current_query_type == QueryType.QUERY3:
                 self.__process_message_query3(fields)
             else:
+                # TODO
                 logging.info("TODO")
             
     

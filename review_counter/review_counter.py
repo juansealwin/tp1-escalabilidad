@@ -12,6 +12,7 @@ class ReviewCounter():
 
     def __init__(self) -> None:
         self.counter = {}
+        
         self.__init_config()
         time.sleep(10)
         self.__connect_to_rabbitmq()
@@ -20,8 +21,7 @@ class ReviewCounter():
         self.shutdown_requested = False
 
     def __init_config(self):
-        log_level = os.getenv("LOG_LEVEL", "INFO")
-        init_log(log_level)
+        init_log()
         self.pair_count = int(os.getenv("PAIR_COUNT", '0'))
         self.leader = int(os.getenv("LEADER",'0'))
 
