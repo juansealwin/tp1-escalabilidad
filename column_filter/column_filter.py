@@ -16,12 +16,21 @@ class ColumnFilter:
 
         self.queue_manager = QueueManager()
 
+        self.__setup_queues()
 
-        # Queue to receive result
+        self.current_query_type = None
+
+
+    def __setup_queues(self):
+        # Queue to receive books_data
         self.queue_manager.setup_receive_queue('books_data', self.__process_message)
-        self.queue_manager.setup_send_queue('book_joiner', durable=True)
 
-        # Queue to send book_data
+        # Queue to send book_joiner
+        self.queue_manager.setup_send_queue('book_joiner', durable=True)
+        # Queue to send ficton_books
+        self.queue_manager.setup_send_queue('ficton_books', durable=True)
+
+        # Queue to send result Query1
         self.queue_manager.setup_send_queue('result')
 
         self.current_query_type = None
@@ -45,8 +54,13 @@ class ColumnFilter:
         elif line == "END":
             if self.current_query_type== QueryType.QUERY1.value:
                 self.queue_manager.send_message('result', "END")
-            else:
+
+            elif self.current_query_type == QueryType.QUERY5.value:
+                self.queue_manager.send_message('ficton_books', "END")
+                
+            else: 
                 self.queue_manager.send_message('book_joiner', "END")
+            ##self.queue_manager.send_message('result', "END")
 
         else: 
             fields = line.split('|')
@@ -57,9 +71,11 @@ class ColumnFilter:
                 self.__process_message_query3_4(fields)
             elif self.current_query_type == QueryType.QUERY4.value:
                 self.__process_message_query3_4(fields)
+                self.__process_message_query4(fields)
+            elif self.current_query_type == QueryType.QUERY5.value:
+                self.__process_message_query5(fields)                
             else:
-                # TODO
-                logging.info("TODO")
+                logging.error("[x] column_filter query not implemented")
             
     
     def __process_message_query1(self, fields):
@@ -94,8 +110,7 @@ class ColumnFilter:
             result_line = ','.join(fields)
             self.queue_manager.send_message('result', result_line)
 
-    # TODO
-    def __process_message_query3_4(self,fields):
+    def __process_message_query3_4(self, fields):
         try:
             publisher_date_field = fields[self.PUBLISHER_DATE_POS]
         except:
@@ -118,6 +133,18 @@ class ColumnFilter:
                     return
         self.queue_manager.send_message('book_joiner', F"{fields[self.TITLE_POS]}|{fields[self.AUTHOR_POS]}")
         return
+
+    def __process_message_query5(self, fields):
+        if 'Fiction' in fields[self.CATEGORY_POS]:
+            #logging.info(f" [x] column_filter sending: {fields[self.TITLE_POS]}")
+            self.queue_manager.send_message('ficton_books', f"{fields[self.TITLE_POS]}")
+            
+        
+
+
+    # def __send_message(self, channel, message, routing_key):
+    #     channel.basic_publish(message)
+    #     logging.debug(f" [x] Sent '{message}'")
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')

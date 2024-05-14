@@ -90,8 +90,11 @@ class Client:
                 reader = csv.reader(file)
                 next(reader)
 
-                if query_type == QueryType.QUERY1.value or query_type == QueryType.QUERY3.value or  query_type == QueryType.QUERY3.value: 
-                    self.queue_manager.send_message(self.books_data, query_type)
+                if query_type == QueryType.QUERY1 or query_type == QueryType.QUERY3:
+                    logging.info(f"{query_type}")
+                    self.queue_manager.send_message('books_data', "Query3")
+                #if query_type == QueryType.QUERY1.value:
+                #self.queue_manager.send_message('books_data', query_type)
 
                 for line in reader:
                     msg = self.__filter_book_data_line(line)
