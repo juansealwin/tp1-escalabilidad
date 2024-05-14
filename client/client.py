@@ -90,6 +90,8 @@ class Client:
                 if query_type == QueryType.QUERY1 or query_type == QueryType.QUERY3:
                     logging.info(f"{query_type}")
                     self.queue_manager.send_message('books_data', "Query3")
+                #if query_type == QueryType.QUERY1.value:
+                #self.queue_manager.send_message('books_data', query_type)
 
                 for line in reader:
                     msg = self.__filter_book_data_line(line)

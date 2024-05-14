@@ -20,14 +20,7 @@ class DecadeFilter():
 
         self.queue_manager = QueueManager()
 
-        # Queue to receive books_data
-        self.queue_manager.setup_receive_queue('books_data', self.__process_message)
-
-        # Queue to send books_data
-        self.queue_manager.setup_send_queue('authors_and_decades')
-
-        # Queue to set internal comm between workers
-        self.queue_manager.setup_leader_queues(self.id, self.leader, self.total_workers, self.__process_result)
+        self.__setup_queues()
 
         signal.signal(signal.SIGTERM, self.handle_sigterm)
 
@@ -37,6 +30,16 @@ class DecadeFilter():
         self.leader = int(os.getenv("LEADER",'0'))
         self.id = int(os.getenv("ID",'0'))
 
+
+    def __setup_queues(self):
+        # Queue to receive books_data
+        self.queue_manager.setup_receive_queue('books_data', self.__process_message)
+
+        # Queue to send books_data
+        self.queue_manager.setup_send_queue('authors_and_decades')
+
+        # Queue to set internal comm between workers
+        self.queue_manager.setup_leader_queues(self.id, self.leader, self.total_workers, self.__process_result)
     
 
     def __process_message(self, ch, method, properties, body):
