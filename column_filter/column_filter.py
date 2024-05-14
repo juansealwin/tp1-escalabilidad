@@ -7,7 +7,8 @@ from rabbitmq.queue_manager import *
 class ColumnFilter:
     TITLE_POS = 0
     PUBLISHER_DATE_POS = 3
-    CATEGORY_POS = 4 
+    CATEGORY_POS = 4
+    AUTHOR_POS = 1
 
     def __init__(self):
         init_log()  
@@ -18,6 +19,7 @@ class ColumnFilter:
 
         # Queue to receive result
         self.queue_manager.setup_receive_queue('books_data', self.__process_message)
+        self.queue_manager.setup_send_queue('book_joiner', durable=True)
 
         # Queue to send book_data
         self.queue_manager.setup_send_queue('result')
@@ -34,8 +36,6 @@ class ColumnFilter:
         logging.info(f"[!] Wrong first message: {line}...")    
 
     def __process_message(self, ch, method, properties, body):
-        logging.info(f" [x] Received {body}")
-
         # Decode the msg
         line = body.decode('utf-8')
 
@@ -44,7 +44,8 @@ class ColumnFilter:
             
         # TODO: change for each type of query    
         elif line == "END":
-            self.queue_manager.send_message('result', "END")
+            pass
+            ##self.queue_manager.send_message('result', "END")
 
         else: 
             fields = line.split('|')
@@ -93,31 +94,29 @@ class ColumnFilter:
             self.queue_manager.send_message('result', result_line)
 
     # TODO
-    def __process_message_query2(fields):
-        # try:
-        #     publisher_date_field = fields[self.PUBLISHER_DATE_POS]
-        #     logging.debug(f"DATE : {publisher_date_field}")
-        # except:
-        #     return
-        #     pass
-        # try:
-        #     year = int(publisher_date_field)
-        #     if not 1990 <= year <= 1999:
-        #         return
-        # except:
-        #     # Format #yyyy-mm-dd
-        #     parts = publisher_date_field.split('-')
-        #     if len(parts) > 0:
-        #         try:
-        #             year = int(parts[0])
-        #             if not 1990 <= year <= 1999:
-        #                 logging.debug("sending to next")
-        #                 return
+    def __process_message_query2(self,fields):
+        try:
+            publisher_date_field = fields[self.PUBLISHER_DATE_POS]
+        except:
+            return
+            pass
+        try:
+            year = int(publisher_date_field)
+            if not 1990 <= year <= 1999:
+                return
+        except:
+            # Format #yyyy-mm-dd
+            parts = publisher_date_field.split('-')
+            if len(parts) > 0:
+                try:
+                    year = int(parts[0])
+                    if not 1990 <= year <= 1999:
+                        return
 
-        #         except ValueError:
-        #             pass
+                except ValueError:
+                    return
         
-        # self.__send_message(self.__book_joiner, fields[self.TITLE_POS], 'book_joiner')
+        self.queue_manager.send_message('book_joiner', F"{fields[self.TITLE_POS]}|{fields[self.AUTHOR_POS]}")
         return
 
     def __process_message_query3(fields):

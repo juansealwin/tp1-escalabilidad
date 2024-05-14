@@ -13,6 +13,6 @@ if __name__ == "__main__":
     recv_result_process = multiprocessing.Process(target=client.recv_result)
     recv_result_process.start()
 
-    send_books_process.join()
+    #send_books_process.join()
     #send_rating_process.join()
-    recv_result_process.join()
+    #recv_result_process.join()
