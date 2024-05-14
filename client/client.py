@@ -14,6 +14,7 @@ class Client:
         init_log()
         self.config = self.__init_config()
         time.sleep(10)
+        self.received_results = 0 
 
         self.queue_manager = QueueManager()
 
@@ -49,11 +50,15 @@ class Client:
 
 
     def __process_result(self, ch, method, properties, body):
-        logging.info(f" [x] Received {body}")    
+        line = body.decode('utf-8')
+        logging.info(f"[x] Received {line}")    
 
-        if body.decode('utf-8') == "END":
+        if line == "END":
+            logging.info(f"Total results received: {self.received_results}")
             logging.info("Received END message. Exiting...")
             os._exit(0)
+        else:
+            self.received_results = self.received_results + 1
 
     def __filter_book_data_line(self, line):
         # Books data header: 

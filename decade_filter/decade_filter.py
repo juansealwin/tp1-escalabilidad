@@ -27,7 +27,7 @@ class DecadeFilter():
         self.queue_manager.setup_send_queue('authors_and_decades')
 
         # Queue to set internal comm between workers
-        self.queue_manager.setup_leader_queues(self.id, self.leader, self.total_workers, 'authors_and_decades')
+        self.queue_manager.setup_leader_queues(self.id, self.leader, self.total_workers, self.__process_result)
 
         signal.signal(signal.SIGTERM, self.handle_sigterm)
 
@@ -45,8 +45,9 @@ class DecadeFilter():
 
         if line == "END":
             # First protocol msg to result queue
-            self.queue_manager.send_message('authors_and_decades', f"{QueryType.QUERY2},{self.total_workers}")
-
+            first_msg = f"{QueryType.QUERY2.value},{self.total_workers}"
+            logging.info(f"Worker_{self.id}, sending first msg {first_msg}")
+            self.queue_manager.send_message('authors_and_decades', first_msg)
             logging.info(f"Worker_{self.id} propagate end to all {self.total_workers} workers")
             self.queue_manager.propagate_end_message()
             return
@@ -91,8 +92,8 @@ class DecadeFilter():
     def __process_result(self):
         logging.info(f"Worker_{self.id} Processing results...")
         for author, decades in self.author_decades.items():
-            decades_str = ' | '.join(str(decade) for decade in decades)
-            message = f"{author}, {decades_str}"
+            decades_str = ','.join(str(decade) for decade in decades)
+            message = f"{author}|{decades_str}"
             self.queue_manager.send_message('authors_and_decades', message)
 
         self.queue_manager.send_message('authors_and_decades', "END")    

@@ -28,10 +28,8 @@ class ColumnFilter:
     def __set_current_query_type(self, line):
         for query_type in QueryType:
             if line == query_type.value:
-                self.current_query_type = query_type
-                return
-            else:
-                logging.info(f"line {line}, query_type {query_type}...")    
+                self.current_query_type = query_type.value
+                return  
     
         logging.info(f"[!] Wrong first message: {line}...")    
 
@@ -51,11 +49,11 @@ class ColumnFilter:
         else: 
             fields = line.split('|')
 
-            if self.current_query_type == QueryType.QUERY1:
+            if self.current_query_type == QueryType.QUERY1.value:
                 self.__process_message_query1(fields)
-            elif self.current_query_type == QueryType.QUERY2:
+            elif self.current_query_type == QueryType.QUERY2.value:
                 self.__process_message_query2(fields)
-            elif self.current_query_type == QueryType.QUERY3:
+            elif self.current_query_type == QueryType.QUERY3.value:
                 self.__process_message_query3(fields)
             else:
                 # TODO

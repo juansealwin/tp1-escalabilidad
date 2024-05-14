@@ -11,6 +11,7 @@ class Joiner:
     TITLE_POS = 0
     COUNT_POS = 1
     RATING_POS = 2
+    MIN_DIFF_DECADES = 9
 
     def __init__(self):
         
@@ -51,11 +52,10 @@ class Joiner:
         
         for query_type in QueryType:
             if fields[0] == query_type.value:
-                self.current_query_type = query_type
+                self.current_query_type = query_type.value
                 self.total_input_workers = int(fields[1])
+                logging.info(f"query_type {self.current_query_type}, total_input_workers {self.total_input_workers}...") 
                 return
-            else:
-                logging.info(f"query_type {self.current_query_type}, total_input_workers {self.total_input_workers}...")    
     
         logging.info(f"[!] Wrong first message: {line}...")        
 
@@ -64,70 +64,79 @@ class Joiner:
 
         # Decode the msg
         line = body.decode('utf-8')
-
+        #logging.info(f"Joiner: {line}") 
         if self.current_query_type is None:
             self.__set_current_query_type(line)
             
         # TODO: change for each type of query    
         elif line == "END":
-            if self.total_input_workers == self.finished_workers:
+            logging.info(f"Joiner: END arrived...") 
+            if (self.total_input_workers - 1) == self.finished_workers:
+                logging.info(f"Joiner: starting proccesing result of Query2...") 
                 self.__process_result_query2() 
+
             else:    
                 self.finished_workers = self.finished_workers + 1
 
         else: 
-            if self.current_query_type == QueryType.QUERY2:
+            if self.current_query_type == QueryType.QUERY2.value:
                 self.__process_message_query2(line)                
             else:
                 self.__process_message_query3(line)
 
         
 
-    def __process_message_query2(fields):
-        author, decades_str = line.split(',')
-        decades = [int(decade) for decade in decades_str.split('|')]
+    def __process_message_query2(self, line):        
+        parts = line.split('|')
+        # Could be several authors
+        authors = [author.strip(" '[]") for author in parts[0].split(',')]
+        decades_str = parts[1].strip()
+        decades = [int(decade) for decade in decades_str.split(',')]
 
-        if author in self.author_decades:
-            existing_decades = self.author_decades[author]
-            for decade in decades:
-                if decade not in existing_decades:
-                    existing_decades.append(decade)
-        else:
-            self.author_decades[author] = decades
+        for author in authors:
+            if author in self.author_decades:
+                existing_decades = self.author_decades[author]
+                for decade in decades:
+                    if decade not in existing_decades:
+                        existing_decades.append(decade)
+            else:
+                self.author_decades[author] = decades
 
-        logging.info(f"Joiner: Updated author and decades: {author} {decades}")    
+        #logging.info(f"Joiner: Updated authors and decades: {authors} {decades}")   
 
 
-    def __process_result_query2(fields):
+    def __process_result_query2(self):
+        #logging.info(f"{self.author_decades}")
+
         for author, decades in self.author_decades.items():
             unique_decades = set(decades)
-            if len(unique_decades) > 10:
-                authors_with_more_than_10_decades.append(author)
-                self.queue_manager('result', author)
+            if len(unique_decades) > self.MIN_DIFF_DECADES:
+                logging.info(f"Joiner: Enviando el siguiente autor: {author} {decades}") 
+                self.queue_manager.send_message('result', author)
 
-        self.queue_manager('result', "END")        
+        self.queue_manager.send_message('result', "END")        
 
-    def __process_message_query3(fields):
-        line = body.decode('utf-8')
-        fields = line.split('|')
-        logging.debug(f" [x] Received {body}")
+    def __process_message_query3(self, line):
+        # fields = line.split('|')
+        # logging.debug(f" [x] Received {line}")
         
-        if line == 'END':
-            self.finished_workers +=1
-            if self.finished_workers == self.pairs:
-                logging.debug('finished pairs')
-                self.__process_books()
-            return
+        # if line == 'END':
+        #     self.finished_workers +=1
+        #     if self.finished_workers == self.pairs:
+        #         logging.debug('finished pairs')
+        #         self.__process_books()
+        #     return
 
-        self.counter.setdefault(fields[self.TITLE_POS],[0,0])
-        self.counter[fields[self.TITLE_POS]][0] += int(fields[self.COUNT_POS])
+        # self.counter.setdefault(fields[self.TITLE_POS],[0,0])
+        # self.counter[fields[self.TITLE_POS]][0] += int(fields[self.COUNT_POS])
         ### agregar contador para rating
+        return
     
     
     def __process_books(self):
         self.__channel_counter.basic_consume(queue='book_joiner', on_message_callback = self.__process_book_message, auto_ack=True)
 
-    def __process_book_message(self,ch, method, properties, body):
+    def __process_book_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
         fields = line.split(',')
         logging.info(f" [x] Received {body}")
