@@ -29,29 +29,27 @@ class Joiner:
 
         self.queue_manager = QueueManager()
 
-        # Queue to receive authors_and_decades
-        self.queue_manager.setup_receive_queue('authors_and_decades', self.__process_message)
-
-        # Queue to send result
-        self.queue_manager.setup_send_queue('result')
-
         self.__setup_queues()
 
-        self.shutdown_requested = False
-        self.queue_type = 3
-        self.event = multiprocessing.Event()
+        #self.event = multiprocessing.Event()
 
     def __init_config(self):
         init_log()
         self.total_workers = int(os.getenv("TOTAL_WORKERS", '0'))
         self.min_reviews = int(os.getenv("MIN_REVIEWS",'500'))
-        self.current_query_type = os.getenv("QUERY_TYPE", QueryType.QUERY2)
+        self.current_query_type = os.getenv("QUERY_TYPE", QueryType.QUERY2.value)
         self.total_input_workers = 0
         self.finished_workers = 0
 
     def __setup_queues(self):
+        # Queue to receive authors_and_decades
+        self.queue_manager.setup_receive_queue('authors_and_decades', self.__process_message)
+
+        # Queue to receive review_counter
         self.queue_manager.setup_receive_queue('review_counter', callback=self.__process_message, auto_ack=True, durable=True)
-        self.queue_manager.setup_send_queue('result', durable=True)
+
+        # Queue to send result
+        self.queue_manager.setup_send_queue('result')
 
 
     def __set_current_query_type(self, line):
@@ -96,7 +94,8 @@ class Joiner:
     def __process_message_query2(self, line):        
         parts = line.split('|')
         # Could be several authors
-        authors = [author.strip(" '[]") for author in parts[0].split(',')]
+        #authors = [author.strip(" '[]") for author in parts[0].split(',')]
+        authors = parts[0].split(',')
         decades_str = parts[1].strip()
         decades = [int(decade) for decade in decades_str.split(',')]
 
@@ -118,7 +117,7 @@ class Joiner:
         for author, decades in self.author_decades.items():
             unique_decades = set(decades)
             if len(unique_decades) > self.MIN_DIFF_DECADES:
-                logging.info(f"Joiner: Enviando el siguiente autor: {author} {decades}") 
+                #logging.info(f"Joiner: Enviando el siguiente autor: {author} {decades}") 
                 self.queue_manager.send_message('result', author)
 
         self.queue_manager.send_message('result', "END")        
@@ -168,15 +167,22 @@ class Joiner:
         self.new_queueManager.setup_receive_queue('book_joiner', callback=self.__process_book_message,auto_ack=True, durable=True)
         logging.debug("setted up queue for book")
         self.new_queueManager.start_consuming('book_joiner')
-            
+
+    
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.author_decades = multiprocessing.Process(target=self.queue_manager.start_consuming,args=('authors_and_decades',))
-        self.author_decades.start()
-        self.review_counter = multiprocessing.Process(target=self.queue_manager.start_consuming,args=('review_counter',))
-        self.review_counter.start()
-        self.books = multiprocessing.Process(target=self.consume_books)
-        self.books.start()
+        self.queue_manager.start_consuming('authors_and_decades')
+        self.queue_manager.start_consuming('review_counter')
+
+    
+    # def run(self):
+    #     logging.info(' [*] Waiting for messages. To exit press CTRL+C')
+    #     self.author_decades = multiprocessing.Process(target=self.queue_manager.start_consuming,args=('authors_and_decades',))
+    #     self.author_decades.start()
+    #     self.review_counter = multiprocessing.Process(target=self.queue_manager.start_consuming,args=('review_counter',))
+    #     self.review_counter.start()
+    #     self.books = multiprocessing.Process(target=self.consume_books)
+    #     self.books.start()
 
 
 
