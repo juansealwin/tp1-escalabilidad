@@ -5,6 +5,7 @@ import pika
 import logging
 import signal
 from common.log import init_log
+from common.protocol import QueryType
 from rabbitmq.queue_manager import *
 
 class ReviewCounter():
@@ -44,9 +45,12 @@ class ReviewCounter():
             return
         
         line = body.decode('utf-8')
-
+        
         if line == "END":
             logging.info(f"sending ending signal to all {self.pair_count} pairs")
+            first_message = f"{QueryType.QUERY3.value},{self.pair_count}"
+            logging.info(f"sending query signal to joiner {QueryType.QUERY3.value}")
+            self.queue_manager.send_message('review_counter',first_message)
             if self.id != self.leader:
                 self.queue_manager.send_message('leader_finish' ,f"END,{self.id}")
                 self.__forward_message()

@@ -24,7 +24,7 @@ class ColumnFilter:
         # Queue to send book_data
         self.queue_manager.setup_send_queue('result')
 
-        self.current_query_type = None
+        self.current_query_type = QueryType.QUERY3.value
         
 
     def __set_current_query_type(self, line):
@@ -41,9 +41,11 @@ class ColumnFilter:
 
         if self.current_query_type is None:
             self.__set_current_query_type(line)
+
             
         # TODO: change for each type of query    
         elif line == "END":
+            self.queue_manager.send_message('book_joiner', "END")
             pass
             ##self.queue_manager.send_message('result', "END")
 
@@ -52,10 +54,10 @@ class ColumnFilter:
 
             if self.current_query_type == QueryType.QUERY1.value:
                 self.__process_message_query1(fields)
-            elif self.current_query_type == QueryType.QUERY2.value:
-                self.__process_message_query2(fields)
             elif self.current_query_type == QueryType.QUERY3.value:
                 self.__process_message_query3(fields)
+            elif self.current_query_type == QueryType.QUERY4.value:
+                self.__process_message_query4(fields)
             else:
                 # TODO
                 logging.info("TODO")
@@ -94,7 +96,7 @@ class ColumnFilter:
             self.queue_manager.send_message('result', result_line)
 
     # TODO
-    def __process_message_query2(self,fields):
+    def __process_message_query3(self,fields):
         try:
             publisher_date_field = fields[self.PUBLISHER_DATE_POS]
         except:
@@ -115,11 +117,10 @@ class ColumnFilter:
 
                 except ValueError:
                     return
-        
         self.queue_manager.send_message('book_joiner', F"{fields[self.TITLE_POS]}|{fields[self.AUTHOR_POS]}")
         return
 
-    def __process_message_query3(fields):
+    def __process_message_query4(fields):
         return
 
 

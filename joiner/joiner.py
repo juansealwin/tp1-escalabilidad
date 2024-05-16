@@ -1,5 +1,4 @@
 import multiprocessing
-import threading
 import time
 import os
 import pika
@@ -21,6 +20,7 @@ class Joiner:
         self.__init_config()
         time.sleep(10)
         self.counter = {}
+        self.queue = multiprocessing.Queue()
 
         self.author_decades = {}
 
@@ -31,7 +31,7 @@ class Joiner:
 
         self.__setup_queues()
 
-        #self.event = multiprocessing.Event()
+        self.event = multiprocessing.Event()
 
     def __init_config(self):
         init_log()
@@ -54,7 +54,6 @@ class Joiner:
 
     def __set_current_query_type(self, line):
         fields = line.split(',')
-        
         for query_type in QueryType:
             if fields[0] == query_type.value:
                 self.current_query_type = query_type.value
@@ -72,13 +71,17 @@ class Joiner:
         #logging.info(f"Joiner: {line}") 
         if self.current_query_type is None:
             self.__set_current_query_type(line)
-            
+        
         # TODO: change for each type of query    
         elif line == "END":
             logging.info(f"Joiner: END arrived...") 
             if (self.total_input_workers - 1) == self.finished_workers:
-                logging.info(f"Joiner: starting proccesing result of Query2...") 
-                self.__process_result_query2() 
+                if self.current_query_type == QueryType.QUERY2.value:
+                    logging.info(f"Joiner: starting proccesing result of Query2...") 
+                    self.__process_result_query2() 
+                else:
+                    logging.info(f"Joiner: starting proccesing result of Query3...") 
+                    self.__process_books()
 
             else:    
                 self.finished_workers = self.finished_workers + 1
@@ -123,39 +126,40 @@ class Joiner:
         self.queue_manager.send_message('result', "END")        
 
     def __process_message_query3(self, line):
-        # fields = line.split('|')
-        # logging.debug(f" [x] Received {line}")
+        fields = line.split('|')
+        logging.debug(f" [x] Received {line}")
         
-        # if line == 'END':
-        #     self.finished_workers +=1
-        #     if self.finished_workers == self.pairs:
-        #         logging.debug('finished pairs')
-        #         self.__process_books()
-        #     return
+        title = fields[self.TITLE_POS]
+        count_info = self.counter.get(title, [0, 0])
+        current_count = count_info[0]
 
-        # self.counter.setdefault(fields[self.TITLE_POS],[0,0])
-        # self.counter[fields[self.TITLE_POS]][0] += int(fields[self.COUNT_POS])
-        ### agregar contador para rating
+        updated_count = current_count + int(fields[self.COUNT_POS])
+
+        self.counter[title] = [updated_count, count_info[1]]
         return
     
     
     def __process_books(self):
+        self.queue.put(self.counter)
         logging.debug("Start book analyzer")
         self.event.set()
 
     def __process_book_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
         fields = line.split('|')
-        logging.info(f" [x] Received {body}")
+        logging.debug(f" [x] Received {body}")
         
         if line == 'END':
             self.counter = {}
             self.finished_workers = 0
+            self.queue_manager.send_message('result','END')
             return
         
-        if self.current_query_type == QueryType.QUERY3:
-            if self.counter.get(fields[self.TITLE_POS], [0])[0] >= self.min_count:
-                self.queue_manager.send_message('result', f"{fields[self.COUNT_POS]}")
+        #if self.current_query_type == QueryType.QUERY3.value:
+        count = self.counter.get(fields[self.TITLE_POS], [0])[0]
+        
+        if count >= self.min_reviews:
+            self.queue_manager.send_message('result', f"{fields[self.TITLE_POS]},{count}")
 
     
 
@@ -163,16 +167,21 @@ class Joiner:
         logging.debug("request book")
         self.event.wait()
         logging.debug("aquired book")
+        self.counter = self.queue.get()
         self.new_queueManager= QueueManager()
         self.new_queueManager.setup_receive_queue('book_joiner', callback=self.__process_book_message,auto_ack=True, durable=True)
-        logging.debug("setted up queue for book")
         self.new_queueManager.start_consuming('book_joiner')
 
     
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.queue_manager.start_consuming('authors_and_decades')
-        self.queue_manager.start_consuming('review_counter')
+        def consume():
+        #     #self.queue_manager.start_consuming('authors_and_decades')
+            self.queue_manager.start_consuming('review_counter')
+        self.consume = multiprocessing.Process(target = consume)
+        self.consume.start()
+        self.books = multiprocessing.Process(target=self.consume_books)
+        self.books.start()
 
     
     # def run(self):

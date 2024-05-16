@@ -26,13 +26,26 @@ services:
       - BOOKS_RATING_FILE=data/Books_rating.csv
       #- BOOKS_RATING_FILE=data/books_rating_reduced.csv
       #- BOOKS_DATA_FILE=data/test_avg_rating.csv
-      - QUERY_TYPE=Query2
+      - QUERY_TYPE=Query3
       - LOG_LEVEL=INFO      
 
-  # column_filter:
+  column_filter:
+    build: 
+      context: ./
+      dockerfile: ./column_filter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO  
+
+  # decade_filter_1:
   #   build: 
   #     context: ./
-  #     dockerfile: ./column_filter/Dockerfile
+  #     dockerfile: ./decade_filter/Dockerfile
   #   restart: on-failure
   #   entrypoint: python3 /main.py
   #   depends_on:
@@ -40,39 +53,26 @@ services:
   #   links: 
   #     - rabbitmq
   #   environment:
-  #     - LOG_LEVEL=INFO  
+  #     - LOG_LEVEL=INFO 
+  #     - TOTAL_WORKERS=2
+  #     - LEADER=0
+  #     - ID=0 
 
-  decade_filter_1:
-    build: 
-      context: ./
-      dockerfile: ./decade_filter/Dockerfile
-    restart: on-failure
-    entrypoint: python3 /main.py
-    depends_on:
-      - rabbitmq
-    links: 
-      - rabbitmq
-    environment:
-      - LOG_LEVEL=INFO 
-      - TOTAL_WORKERS=2
-      - LEADER=0
-      - ID=0 
-
-  decade_filter_2:
-    build: 
-      context: ./
-      dockerfile: ./decade_filter/Dockerfile
-    restart: on-failure
-    entrypoint: python3 /main.py
-    depends_on:
-      - rabbitmq
-    links: 
-      - rabbitmq
-    environment:
-      - LOG_LEVEL=INFO 
-      - TOTAL_WORKERS=2
-      - LEADER=0
-      - ID=1 
+  # decade_filter_2:
+  #   build: 
+  #     context: ./
+  #     dockerfile: ./decade_filter/Dockerfile
+  #   restart: on-failure
+  #   entrypoint: python3 /main.py
+  #   depends_on:
+  #     - rabbitmq
+  #   links: 
+  #     - rabbitmq
+  #   environment:
+  #     - LOG_LEVEL=INFO 
+  #     - TOTAL_WORKERS=2
+  #     - LEADER=0
+  #     - ID=1 
 
   review_counter:
     build: 
@@ -122,21 +122,6 @@ services:
       - LEADER=0
       - ID=2
 
-  # review_counter_2:
-  #   build: 
-  #     context: ./
-  #     dockerfile: ./review_counter/Dockerfile
-  #   restart: on-failure
-  #   entrypoint: python3 /main.py
-  #   depends_on:
-  #     - rabbitmq
-  #   links: 
-  #     - rabbitmq
-  #   environment:
-  #     - LOG_LEVEL=DEBUG
-  #     - PAIR_COUNT=3
-  #     - LEADER=0
-  #     - ID=2
   joiner:
     build: 
       context: ./
@@ -150,7 +135,8 @@ services:
     environment:
       - LOG_LEVEL=INFO
       - TOTAL_WORKERS=3
-      - MIN_REVIEWS=100
+      - MIN_REVIEWS=5
+
   # avg_rating:
   #   build: 
   #     context: ./

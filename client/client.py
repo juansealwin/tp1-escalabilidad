@@ -79,7 +79,7 @@ class Client:
     def send_books_data(self):
 
         file_name = self.config["books_data_file"]
-        query_type = self.config["query_type"]
+        query_type = str(self.config["query_type"])
 
         if os.path.isfile(file_name):
             with open(file_name, 'r', encoding='utf-8') as file:
@@ -87,8 +87,9 @@ class Client:
                 reader = csv.reader(file)
                 next(reader)
 
-                if query_type == QueryType.QUERY1:
-                    self.queue_manager.send_message('books_data', query_type)
+                if query_type == QueryType.QUERY1 or query_type == QueryType.QUERY3:
+                    logging.info(f"{query_type}")
+                    self.queue_manager.send_message('books_data', "Query3")
 
                 for line in reader:
                     msg = self.__filter_book_data_line(line)
@@ -102,13 +103,11 @@ class Client:
 
     def send_rating_data(self):
         file_name = self.config["books_rating_file"]
-
         if os.path.isfile(file_name):
             with open(file_name, 'r', encoding='utf-8') as file:
                 # Discard header
                 reader = csv.reader(file)
                 next(reader)
-
                 for line in reader:
                     msg = self.__filter_rating_data_line(line)
                     self.queue_manager.send_message('rating_data', msg)
@@ -116,7 +115,7 @@ class Client:
 
         else:
             logging.info(f' [!] File not found: {file_name}')
-
+        logging.info(f'finished rating queue')
         
     def recv_result(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
