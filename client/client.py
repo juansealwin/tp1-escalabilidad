@@ -1,13 +1,10 @@
 import os
-import pika
-import time
 import logging
-import csv
-import os
-from configparser import ConfigParser
+import socket
+import time
 from common.log import init_log
 from common.protocol import QueryType
-from rabbitmq.queue_manager import *
+
 
 class Client:
     def __init__(self):
@@ -34,34 +31,41 @@ class Client:
     def __init_config(self):
         init_log()
 
-        """ Parse env variables or config file to find program config params"""
-        config = ConfigParser(os.environ)
-    
-        config_params = {}
-        try:
-            config_params["books_data_file"] = os.getenv('BOOKS_DATA_FILE', config["DEFAULT"]["BOOKS_DATA_FILE"])
-            config_params["books_rating_file"] = os.getenv('BOOKS_RATING_FILE', config["DEFAULT"]["BOOKS_RATING_FILE"])
-            config_params["query_type"] = os.getenv('QUERY_TYPE', config["DEFAULT"]["QUERY_TYPE"])
+        self.query_type = os.getenv('QUERY_TYPE')
+        if not QueryType.validate_query_type(self.query_type):
+            raise ValueError(f"Invalid query_type: {self.query_type}")
 
-        except KeyError as e:
-            raise KeyError("Key was not found. Error: {} .Aborting client".format(e))
+    def request_query(self):
 
-        except ValueError as e:
-            raise ValueError("Key could not be parsed. Error: {}. Aborting client".format(e))
+        while True:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        return config_params
+            try:
+                logging.info("Intentando conectarme....")
+                client_socket.connect(self.server_address)
+                logging.info("Me conecte")
+                client_socket.sendall(self.query_type.encode())
+                self.recv_response(client_socket)
+
+            except ConnectionRefusedError:
+                logging.error("Connection refused. Make sure the server is running.")
+                time.sleep(2)
+                continue
+
+            finally:
+                client_socket.close()
 
 
-    def __process_result(self, ch, method, properties, body):
-        line = body.decode('utf-8')
-        logging.info(f"[x] Received {line}")    
+    def recv_response(self, client_socket):
+        logging.info("Waiting for response from server...")
+        while True:
+            response = client_socket.recv(1024).decode()
+            logging.info("Response from server:", response)
+            self.total_responses += 1
 
-        if line == "END":
-            logging.info(f"Total results received: {self.received_results}")
-            logging.info("Received END message. Exiting...")
-            os._exit(0)
-        else:
-            self.received_results = self.received_results + 1
+            if response == "END":
+                logging.info(f"Received a total of {self.total_responses} responses. Exiting...")
+                break
 
     def __filter_book_data_line(self, line):
         # Books data header: 
