@@ -1,0 +1,69 @@
+name: tp1-escalabilidad
+services:
+  rabbitmq:
+    build:
+      context: ./rabbitmq
+      dockerfile: Dockerfile
+    ports:
+      - "15672:15672"  
+      - "5672:5672"  
+
+  client:
+    build: 
+      context: ./
+      dockerfile: ./client/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    volumes:
+      - ./data:/data
+    environment:
+      - BOOKS_DATA_FILE=data/books_data.csv
+      #- BOOKS_DATA_FILE=data/books_data_reduced.csv
+      - BOOKS_RATING_FILE=data/Books_rating.csv
+      #- BOOKS_RATING_FILE=data/books_rating_reduced.csv
+      #- BOOKS_DATA_FILE=data/test_avg_rating.csv
+      - QUERY_TYPE=Query5
+      - LOG_LEVEL=INFO      
+
+  column_filter:
+    build: 
+      context: ./
+      dockerfile: ./column_filter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO  
+
+  avg_rating:
+    build: 
+      context: ./
+      dockerfile: ./avg_rating/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO
+      
+  sentiment_filter:
+    build: 
+      context: ./
+      dockerfile: ./sentiment_filter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO
