@@ -10,6 +10,7 @@ from rabbitmq.queue_manager import *
 
 class ReviewCounter():
     TITLE_POS = 0
+    RATING_POS = 3
 
     def __init__(self) -> None:
         self.counter = {}
@@ -61,8 +62,9 @@ class ReviewCounter():
                 return
 
         fields = line.split('|')
-        self.counter.setdefault(fields[self.TITLE_POS], 0)
-        self.counter[fields[self.TITLE_POS]] += 1
+        self.counter.setdefault(fields[self.TITLE_POS], [0,0])
+        self.counter[fields[self.TITLE_POS]][0] += 1
+        self.counter[fields[self.TITLE_POS]][1] += float(fields[self.RATING_POS])
         logging.debug(f"processed {fields[self.TITLE_POS]}")
 
     def __process_finish_message(self, ch, method, properties, body):
@@ -89,7 +91,7 @@ class ReviewCounter():
     def __forward_message(self):
         logging.info("forwarding messages")
         for key in self.counter.keys():
-            self.queue_manager.send_message('review_counter',f"{key}|{self.counter[key]}")
+            self.queue_manager.send_message('review_counter',f"{key}|{self.counter[key][0]}|{self.counter[key][1]}")
         
         self.counter = {}
         logging.info(f"sending end signal")

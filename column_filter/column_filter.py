@@ -54,9 +54,9 @@ class ColumnFilter:
             if self.current_query_type == QueryType.QUERY1.value:
                 self.__process_message_query1(fields)
             elif self.current_query_type == QueryType.QUERY3.value:
-                self.__process_message_query3(fields)
+                self.__process_message_query3_4(fields)
             elif self.current_query_type == QueryType.QUERY4.value:
-                self.__process_message_query4(fields)
+                self.__process_message_query3_4(fields)
             else:
                 # TODO
                 logging.info("TODO")
@@ -95,7 +95,7 @@ class ColumnFilter:
             self.queue_manager.send_message('result', result_line)
 
     # TODO
-    def __process_message_query3(self,fields):
+    def __process_message_query3_4(self,fields):
         try:
             publisher_date_field = fields[self.PUBLISHER_DATE_POS]
         except:
@@ -118,14 +118,6 @@ class ColumnFilter:
                     return
         self.queue_manager.send_message('book_joiner', F"{fields[self.TITLE_POS]}|{fields[self.AUTHOR_POS]}")
         return
-
-    def __process_message_query4(fields):
-        return
-
-
-    # def __send_message(self, channel, message, routing_key):
-    #     channel.basic_publish(message)
-    #     logging.debug(f" [x] Sent '{message}'")
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')

@@ -89,7 +89,7 @@ class Client:
                 reader = csv.reader(file)
                 next(reader)
 
-                if query_type == QueryType.QUERY1.value or query_type == QueryType.QUERY3.value:
+                if query_type == QueryType.QUERY1.value or query_type == QueryType.QUERY3.value or  query_type == QueryType.QUERY3.value: 
                     self.queue_manager.send_message(self.books_data, query_type)
 
                 for line in reader:
@@ -116,7 +116,6 @@ class Client:
 
         else:
             logging.info(f' [!] File not found: {file_name}')
-        logging.info(f'finished rating queue')
         
     def recv_result(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')

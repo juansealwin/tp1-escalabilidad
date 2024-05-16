@@ -176,7 +176,7 @@ class Joiner:
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
         def consume():
-        #     #self.queue_manager.start_consuming('authors_and_decades')
+            #self.queue_manager.start_consuming('authors_and_decades')
             self.queue_manager.start_consuming('review_counter')
         self.consume = multiprocessing.Process(target = consume)
         self.consume.start()
