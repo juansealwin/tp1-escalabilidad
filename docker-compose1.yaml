@@ -1,26 +1,12 @@
 name: tp1-escalabilidad
 services:
-  # rabbitmq:
-  #   build:
-  #     context: ./rabbitmq
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "15672:15672"  
-  #     - "5672:5672"  
-
-  server:
-    build: 
-      context: ./
-      dockerfile: ./server/Dockerfile
-    restart: on-failure
-    networks:
-      - test_net  
-    # depends_on:
-    #   - rabbitmq
-    # links: 
-    #   - rabbitmq
-    environment:
-      - LOG_LEVEL=INFO      
+  rabbitmq:
+    build:
+      context: ./rabbitmq
+      dockerfile: Dockerfile
+    ports:
+      - "15672:15672"  
+      - "5672:5672"  
 
   client:
     build: 
@@ -28,52 +14,43 @@ services:
       dockerfile: ./client/Dockerfile
     restart: on-failure
     depends_on:
-      - server
-    networks:
-      - test_net  
-    # links: 
-    #   - rabbitmq
+      - rabbitmq 
+    links: 
+      - rabbitmq
     volumes:
       - ./data:/data
     environment:
       - QUERY_TYPE=Query1
       - LOG_LEVEL=INFO    
- 
 
-  # data_sender:
-  #   build: 
-  #     context: ./
-  #     dockerfile: ./data_sender/Dockerfile
-  #   restart: on-failure
-  #   entrypoint: python3 /main.py
-  #   depends_on:
-  #     - rabbitmq
-  #   links: 
-  #     - rabbitmq
-  #   volumes:
-  #     - ./data:/data
-  #   environment:
-  #     - QUEUE_NAME=books_data
-  #     - DATA_FILE=data/books_data_reduced.csv
-  #     #- DATA_FILE=data/books_data.csv
-  #     - LOG_LEVEL=INFO            
 
-  # column_filter:
-  #   build: 
-  #     context: ./
-  #     dockerfile: ./column_filter/Dockerfile
-  #   restart: on-failure
-  #   entrypoint: python3 /main.py
-  #   depends_on:
-  #     - rabbitmq
-  #   links: 
-  #     - rabbitmq
-  #   environment:
-  #     - LOG_LEVEL=INFO  
+  data_sender:
+    build: 
+      context: ./
+      dockerfile: ./data_sender/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    volumes:
+      - ./data:/data
+    environment:
+      - QUEUE_NAME=books_data
+      #- DATA_FILE=data/books_data_reduced.csv
+      - DATA_FILE=data/books_data.csv
+      - LOG_LEVEL=INFO            
 
-networks:
-  test_net:
-    ipam:
-      driver: default
-      config:
-        - subnet: 173.25.125.0/24
+  column_filter:
+    build: 
+      context: ./
+      dockerfile: ./column_filter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO  

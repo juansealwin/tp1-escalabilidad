@@ -32,29 +32,20 @@ class ColumnFilter:
 
         # Queue to send result Query1
         self.queue_manager.setup_send_queue('result')
-
-        self.current_query_type = None
         
-
-    def __set_current_query_type(self, line):
-        for query_type in QueryType:
-            if line == query_type.value:
-                self.current_query_type = query_type.value
-                return  
-    
-        logging.info(f"[!] Wrong first message: {line}...")    
+           
 
     def __process_message(self, ch, method, properties, body):
         # Decode the msg
         line = body.decode('utf-8')
         
         if self.current_query_type is None:
-            self.__set_current_query_type(line)
+            self.current_query_type = QueryType.validate_query_type(line)
 
         elif line == "END":
-            if self.current_query_type== QueryType.QUERY1.value:
+            if self.current_query_type == QueryType.QUERY1.value:
                 self.queue_manager.send_message('result', "END")
-                
+            
             elif self.current_query_type == QueryType.QUERY5.value:
                 self.queue_manager.send_message('fiction_books', "END")
             else: 
@@ -104,7 +95,6 @@ class ColumnFilter:
         
         # Check title
         if 'distributed' in fields[self.TITLE_POS].lower():
-            logging.info(f"Send book: {fields}")
             result_line = ','.join(fields)
             self.queue_manager.send_message('result', result_line)
 
