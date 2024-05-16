@@ -64,7 +64,10 @@ class ReviewCounter():
         fields = line.split('|')
         self.counter.setdefault(fields[self.TITLE_POS], [0,0])
         self.counter[fields[self.TITLE_POS]][0] += 1
-        self.counter[fields[self.TITLE_POS]][1] += float(fields[self.RATING_POS])
+        try:
+            self.counter[fields[self.TITLE_POS]][1] += float(fields[self.RATING_POS])
+        except:
+            pass
         logging.debug(f"processed {fields[self.TITLE_POS]}")
 
     def __process_finish_message(self, ch, method, properties, body):

@@ -147,7 +147,7 @@ class Joiner:
     def __process_book_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
         fields = line.split('|')
-        logging.debug(f" [x] Received {body}")
+        logging.info(f" [x] Received {body}")
         
         if line == 'END':
             self.counter = {}
@@ -176,7 +176,7 @@ class Joiner:
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
         def consume():
-            #self.queue_manager.start_consuming('authors_and_decades')
+            self.queue_manager.start_consuming('authors_and_decades')
             self.queue_manager.start_consuming('review_counter')
         self.consume = multiprocessing.Process(target = consume)
         self.consume.start()

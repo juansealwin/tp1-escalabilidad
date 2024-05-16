@@ -25,8 +25,9 @@ class Client:
         # Queue to send rating_data
         self.queue_manager.setup_send_queue('rating_data')
 
+        self.queue_manager_2 = QueueManager()
         # Queue to receive result
-        self.queue_manager.setup_receive_queue('result', self.__process_result)
+        self.queue_manager_2.setup_receive_queue('result', self.__process_result)
 
 
 
@@ -118,5 +119,11 @@ class Client:
             logging.info(f' [!] File not found: {file_name}')
         
     def recv_result(self):
-        logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.queue_manager.start_consuming('result')
+        finished = False
+        while not finished:
+            try:
+                logging.info(' [*] Waiting for messages. To exit press CTRL+C')
+                self.queue_manager_2.start_consuming('result')
+                finished = True
+            except:
+                logging.info("Failed to receive result")
