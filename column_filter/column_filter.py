@@ -12,7 +12,6 @@ class ColumnFilter:
 
     def __init__(self):
         init_log()  
-        time.sleep(10)
 
         self.queue_manager = QueueManager()
 

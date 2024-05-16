@@ -8,23 +8,7 @@ services:
       - "15672:15672"  
       - "5672:5672"  
 
-  client:
-    build: 
-      context: ./
-      dockerfile: ./client/Dockerfile
-    restart: on-failure
-    depends_on:
-      - rabbitmq 
-    links: 
-      - rabbitmq
-    volumes:
-      - ./data:/data
-    environment:
-      - QUERY_TYPE=Query1
-      - LOG_LEVEL=INFO    
-
-
-  data_sender:
+  books_data_sender:
     build: 
       context: ./
       dockerfile: ./data_sender/Dockerfile
@@ -40,7 +24,22 @@ services:
       - QUEUE_NAME=books_data
       #- DATA_FILE=data/books_data_reduced.csv
       - DATA_FILE=data/books_data.csv
-      - LOG_LEVEL=INFO            
+      - LOG_LEVEL=INFO 
+
+  client:
+    build: 
+      context: ./
+      dockerfile: ./client/Dockerfile
+    restart: on-failure
+    depends_on:
+      - books_data_sender 
+    links: 
+      - rabbitmq
+    volumes:
+      - ./data:/data
+    environment:
+      - QUERY_TYPE=Query1
+      - LOG_LEVEL=INFO               
 
   column_filter:
     build: 
