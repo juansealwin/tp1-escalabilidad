@@ -27,8 +27,8 @@ class ColumnFilter:
 
         # Queue to send book_joiner
         self.queue_manager.setup_send_queue('book_joiner', durable=True)
-        # Queue to send ficton_books
-        self.queue_manager.setup_send_queue('ficton_books', durable=True)
+        # Queue to send fiction_books
+        self.queue_manager.setup_send_queue('fiction_books', durable=True)
 
         # Queue to send result Query1
         self.queue_manager.setup_send_queue('result')
@@ -47,24 +47,22 @@ class ColumnFilter:
     def __process_message(self, ch, method, properties, body):
         # Decode the msg
         line = body.decode('utf-8')
-
+        
         if self.current_query_type is None:
             self.__set_current_query_type(line)
 
         elif line == "END":
             if self.current_query_type== QueryType.QUERY1.value:
                 self.queue_manager.send_message('result', "END")
-
-            elif self.current_query_type == QueryType.QUERY5.value:
-                self.queue_manager.send_message('ficton_books', "END")
                 
+            elif self.current_query_type == QueryType.QUERY5.value:
+                self.queue_manager.send_message('fiction_books', "END")
             else: 
                 self.queue_manager.send_message('book_joiner', "END")
             ##self.queue_manager.send_message('result', "END")
 
         else: 
             fields = line.split('|')
-
             if self.current_query_type == QueryType.QUERY1.value:
                 self.__process_message_query1(fields)
             elif self.current_query_type == QueryType.QUERY3.value:
@@ -135,16 +133,12 @@ class ColumnFilter:
         return
 
     def __process_message_query5(self, fields):
+        
         if 'Fiction' in fields[self.CATEGORY_POS]:
             #logging.info(f" [x] column_filter sending: {fields[self.TITLE_POS]}")
-            self.queue_manager.send_message('ficton_books', f"{fields[self.TITLE_POS]}")
+            self.queue_manager.send_message('fiction_books', f"{fields[self.TITLE_POS]}")
             
         
-
-
-    # def __send_message(self, channel, message, routing_key):
-    #     channel.basic_publish(message)
-    #     logging.debug(f" [x] Sent '{message}'")
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')

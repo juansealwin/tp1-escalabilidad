@@ -3,12 +3,13 @@ import time
 import logging
 import os
 from common.log import init_log
+from common.protocol import QueryType
 from rabbitmq.queue_manager import QueueManager
 
 class AvgRating:
     TITLE_POS = 0
-    TOT_REVIEWS_POS = 1
-    TOT_SCORE_POS = 2 
+    TOT_REVIEWS_POS = 2
+    TOT_SCORE_POS = 1 
     TOP_PERCENTILE = 0.1
 
     def __init__(self):
@@ -16,36 +17,43 @@ class AvgRating:
         time.sleep(10)
         
         self.queue_manager = QueueManager()
+        self.__setup_queues()
+        
+        self.titles_rating = []
+        self.current_query_type = None
 
+
+    def __setup_queues(self):
         # Queue to receive rating data
         self.queue_manager.setup_receive_queue('avg_rating_data', self._process_message)
 
         # Queue to send result
-        self.queue_manager.setup_send_queue('result_data')
-        
-        self.titles_rating = []
-        self.fixed_result = None
+        self.queue_manager.setup_send_queue('result')
          
 
+    def __set_current_query_type(self, line):
+        for query_type in QueryType:
+            if line == query_type.value:
+                self.current_query_type = query_type.value
+                return  
+    
+        logging.info(f"[!] Wrong first message: {line}...") 
 
     def _process_message(self, ch, method, properties, body):
-        logging.info(f" [x] Received {body}")
 
         line = body.decode('utf-8')
 
         if line == "END":
             self._send_result()
 
-        elif self.fixed_result is None:
-            if line == "Query5":
-                self.fixed_result = False
-            else:
-                self.fixed_result = True  
+        elif self.current_query_type is None:
+            self.__set_current_query_type(line)
 
-        else:   
+        else:  
+             
             title, ratio = self._parse_message(line)
 
-            if self.fixed_result:
+            if self.current_query_type == QueryType.QUERY4.value:
                 self._update_top_titles(title, ratio)
             
             else:
@@ -55,11 +63,14 @@ class AvgRating:
 
 
     def _parse_message(self, line):
-        fields = line.split(',')
+        fields = line.split('|')
         title = fields[self.TITLE_POS]
         total_reviews = int(fields[self.TOT_REVIEWS_POS])
         total_score = float(fields[self.TOT_SCORE_POS])
-        ratio = total_score / total_reviews
+        if total_reviews > 0:
+            ratio = total_score / total_reviews
+        else:
+            ratio = 0
 
         return title, ratio
 
@@ -77,19 +88,21 @@ class AvgRating:
 
     def _send_result(self):
 
-        if self.fixed_result:
+        if self.current_query_type == QueryType.QUERY4.value:
             self._send_result_fixed()
         
         else:
             self._send_result_percentage()
 
+
+        self.queue_manager.send_message('result', "END") 
         self.titles_rating = []
-        self.fixed_result = None
+        self.current_query_type = None
+
 
     def _send_result_fixed(self):
         for title, ratio in self.titles_rating:
             msg = f"{title},{ratio}"
-            logging.info(f"Send fixed {msg}")
             self.queue_manager.send_message('result', msg) 
 
     def _send_result_percentage(self):
@@ -98,7 +111,6 @@ class AvgRating:
 
         for title, ratio in top_titles:
             msg = f"{title},{ratio}"
-            logging.info(f"Send percent {msg}")
             self.queue_manager.send_message('result', msg) 
 
     def run(self):
