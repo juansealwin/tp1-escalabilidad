@@ -109,7 +109,7 @@ class Joiner:
                     if decade not in existing_decades:
                         existing_decades.append(decade)
             else:
-                self.author_decades[author] = decades
+                self.author_decades[author] = decades.copy()
 
         #logging.info(f"Joiner: Updated authors and decades: {authors} {decades}")   
 
@@ -121,7 +121,7 @@ class Joiner:
             unique_decades = set(decades)
             if len(unique_decades) > self.MIN_DIFF_DECADES:
                 #logging.info(f"Joiner: Enviando el siguiente autor: {author} {decades}") 
-                self.queue_manager.send_message('result', author)
+                self.queue_manager.send_message('result', f'{author},{len(unique_decades)}')
 
         self.queue_manager.send_message('result', "END")        
 

@@ -21,7 +21,7 @@ class DecadeFilter():
         self.queue_manager = QueueManager()
 
         # Queue to receive books_data
-        self.queue_manager.setup_receive_queue('books_data', self.__process_message)
+        self.queue_manager.setup_receive_queue('books_data_1', self.__process_message)
 
         # Queue to send books_data
         self.queue_manager.setup_send_queue('authors_and_decades')
@@ -79,9 +79,8 @@ class DecadeFilter():
          
         if year is not None:
             # Get the decade
-            decade = year // 10 * 10
+            decade = (year // 10)* 10
 
-            # Update the map
             if author in self.author_decades:
                 if decade not in self.author_decades[author]:
                     self.author_decades[author].append(decade)
@@ -106,4 +105,4 @@ class DecadeFilter():
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.queue_manager.start_consuming('books_data')
+        self.queue_manager.start_consuming('books_data_1')

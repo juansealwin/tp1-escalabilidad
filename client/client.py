@@ -17,9 +17,11 @@ class Client:
         self.received_results = 0 
 
         self.queue_manager = QueueManager()
+        self.books_data = 'books_data_1' if str(self.config["query_type"]) == QueryType.QUERY2.value else 'books_data'
+
 
         # Queue to send books_data
-        self.queue_manager.setup_send_queue('books_data')
+        self.queue_manager.setup_send_queue(self.books_data)
         # Queue to send rating_data
         self.queue_manager.setup_send_queue('rating_data')
 
@@ -87,15 +89,14 @@ class Client:
                 reader = csv.reader(file)
                 next(reader)
 
-                if query_type == QueryType.QUERY1 or query_type == QueryType.QUERY3:
-                    logging.info(f"{query_type}")
-                    self.queue_manager.send_message('books_data', "Query3")
+                if query_type == QueryType.QUERY1.value or query_type == QueryType.QUERY3.value:
+                    self.queue_manager.send_message(self.books_data, query_type)
 
                 for line in reader:
                     msg = self.__filter_book_data_line(line)
-                    self.queue_manager.send_message('books_data', msg)
+                    self.queue_manager.send_message(self.books_data, msg)
 
-                self.queue_manager.send_message('books_data', "END") 
+                self.queue_manager.send_message(self.books_data, "END") 
 
         else:
             logging.info(f' [!] File not found: {file_name}')

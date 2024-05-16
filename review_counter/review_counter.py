@@ -34,10 +34,10 @@ class ReviewCounter():
     
     def __setup_leader_queues(self):
         if self.id == self.leader:
-            self.queue_manager.setup_receive_queue('leader_finish', callback= self.__process_finish_message, auto_ack=True, durable=True)
+            self.queue_manager.setup_receive_queue('leader_finish_rc', callback= self.__process_finish_message, auto_ack=True, durable=True)
         else:
-            self.queue_manager.setup_send_queue('leader_finish',durable=True)
-            self.queue_manager.setup_receive_queue(f'leader_finish_{self.id}',callback=self.__process_finish_message,auto_ack=True, durable=True)            
+            self.queue_manager.setup_send_queue('leader_finish_rc',durable=True)
+            self.queue_manager.setup_receive_queue(f'leader_finish_rc_{self.id}',callback=self.__process_finish_message,auto_ack=True, durable=True)            
 
 
     def __process_message(self, ch, method, properties, body):
@@ -52,7 +52,7 @@ class ReviewCounter():
             logging.info(f"sending query signal to joiner {QueryType.QUERY3.value}")
             self.queue_manager.send_message('review_counter',first_message)
             if self.id != self.leader:
-                self.queue_manager.send_message('leader_finish' ,f"END,{self.id}")
+                self.queue_manager.send_message('leader_finish_rc' ,f"END,{self.id}")
                 self.__forward_message()
                 return
             else:
@@ -83,8 +83,8 @@ class ReviewCounter():
         for i in range(0,self.pair_count):
             if i != self.id and i!= sender:
                 logging.info(f"Sending to {i}")
-                self.queue_manager.setup_send_queue(f'leader_finish_{i}',durable=True)
-                self.queue_manager.send_message(f'leader_finish_{i}',f"END")
+                self.queue_manager.setup_send_queue(f'leader_finish_rc_{i}',durable=True)
+                self.queue_manager.send_message(f'leader_finish_rc_{i}',f"END")
     
     def __forward_message(self):
         logging.info("forwarding messages")

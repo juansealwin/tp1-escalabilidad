@@ -26,7 +26,7 @@ services:
       - BOOKS_RATING_FILE=data/Books_rating.csv
       #- BOOKS_RATING_FILE=data/books_rating_reduced.csv
       #- BOOKS_DATA_FILE=data/test_avg_rating.csv
-      - QUERY_TYPE=Query3
+      - QUERY_TYPE=Query2
       - LOG_LEVEL=INFO      
 
   column_filter:
@@ -42,37 +42,37 @@ services:
     environment:
       - LOG_LEVEL=INFO  
 
-  # decade_filter_1:
-  #   build: 
-  #     context: ./
-  #     dockerfile: ./decade_filter/Dockerfile
-  #   restart: on-failure
-  #   entrypoint: python3 /main.py
-  #   depends_on:
-  #     - rabbitmq
-  #   links: 
-  #     - rabbitmq
-  #   environment:
-  #     - LOG_LEVEL=INFO 
-  #     - TOTAL_WORKERS=2
-  #     - LEADER=0
-  #     - ID=0 
+  decade_filter_1:
+    build: 
+      context: ./
+      dockerfile: ./decade_filter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO 
+      - TOTAL_WORKERS=2
+      - LEADER=0
+      - ID=0 
 
-  # decade_filter_2:
-  #   build: 
-  #     context: ./
-  #     dockerfile: ./decade_filter/Dockerfile
-  #   restart: on-failure
-  #   entrypoint: python3 /main.py
-  #   depends_on:
-  #     - rabbitmq
-  #   links: 
-  #     - rabbitmq
-  #   environment:
-  #     - LOG_LEVEL=INFO 
-  #     - TOTAL_WORKERS=2
-  #     - LEADER=0
-  #     - ID=1 
+  decade_filter_2:
+    build: 
+      context: ./
+      dockerfile: ./decade_filter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO 
+      - TOTAL_WORKERS=2
+      - LEADER=0
+      - ID=1 
 
   review_counter:
     build: 

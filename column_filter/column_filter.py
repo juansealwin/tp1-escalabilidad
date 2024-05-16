@@ -24,7 +24,7 @@ class ColumnFilter:
         # Queue to send book_data
         self.queue_manager.setup_send_queue('result')
 
-        self.current_query_type = QueryType.QUERY3.value
+        self.current_query_type = None
         
 
     def __set_current_query_type(self, line):
@@ -42,12 +42,11 @@ class ColumnFilter:
         if self.current_query_type is None:
             self.__set_current_query_type(line)
 
-            
-        # TODO: change for each type of query    
         elif line == "END":
-            self.queue_manager.send_message('book_joiner', "END")
-            pass
-            ##self.queue_manager.send_message('result', "END")
+            if self.current_query_type== QueryType.QUERY1.value:
+                self.queue_manager.send_message('result', "END")
+            else:
+                self.queue_manager.send_message('book_joiner', "END")
 
         else: 
             fields = line.split('|')
