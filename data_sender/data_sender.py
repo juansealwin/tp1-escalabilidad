@@ -35,7 +35,7 @@ class DataSender:
     def __init__(self):
         init_log()
         self.__init_config()
-        time.sleep(10)
+        
         self.received_results = 0 
 
         self.queue_manager = QueueManager()
@@ -44,7 +44,7 @@ class DataSender:
         self.queue_manager.setup_send_queue(self.queue_name)
 
         # Queue to receive result
-        self.queue_manager.setup_receive_queue('client_request', self.__process_result)
+        self.queue_manager.setup_receive_exchange('client_request', self.__process_result)
 
         self.current_query_type = None
 
@@ -81,7 +81,8 @@ class DataSender:
 
     def __process_result(self, ch, method, properties, body):
         line = body.decode('utf-8')
-        logging.info(f"recibi {line}")
+
+        logging.info(f"Received request for {line}")
         current_query_type = QueryType.validate_query_type(line)
         if current_query_type:
             self.current_query_type = current_query_type
@@ -100,6 +101,7 @@ class DataSender:
                 reader = csv.reader(file)
                 next(reader)
 
+                logging.info(f"Sending in queue: {self.queue_name} the request: {self.current_query_type}")
                 self.queue_manager.send_message(self.queue_name, self.current_query_type)
 
                 for line in reader:
@@ -113,4 +115,4 @@ class DataSender:
 
     def recv_request(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.queue_manager.start_consuming('client_request')
+        self.queue_manager.start_consuming('client_request', exchange=True)

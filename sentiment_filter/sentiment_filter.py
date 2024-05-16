@@ -17,7 +17,6 @@ class SentimentFilter():
 
     def __init__(self):
         self.__init_config()
-        time.sleep(10)
 
         self.fiction_books = {}
         self.rating_data = {}
@@ -26,6 +25,8 @@ class SentimentFilter():
         self.queue_manager = QueueManager()
 
         self.__setup_queues()
+
+        self.current_query_type = None
 
         signal.signal(signal.SIGTERM, self.handle_sigterm)
 
@@ -57,6 +58,12 @@ class SentimentFilter():
 
     def __process_rating_data_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
+        logging.info(f"sentiment_filter {line}")
+
+        
+        if self.current_query_type is None:
+            self.current_query_type = QueryType.validate_query_type(line)
+            return
         
 
         if line == "END":

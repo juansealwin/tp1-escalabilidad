@@ -5,4 +5,4 @@ COPY client /
 COPY common /common
 COPY rabbitmq /rabbitmq
 
-ENTRYPOINT ["python3", "main.py"]
+CMD ["python", "./main.py"]

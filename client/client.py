@@ -10,12 +10,13 @@ from common.protocol import QueryType
 class Client:
     def __init__(self):
         self.__init_config()
+        
         self.queue_manager = QueueManager()
         
         self.received_results = 0
 
         #Queue to send data
-        self.queue_manager.setup_send_queue('client_request')
+        self.queue_manager.setup_send_exchange('client_request')
 
         #Queue to receive result
         self.queue_manager.setup_receive_queue('result', self.__process_result)
@@ -46,7 +47,8 @@ class Client:
     def send_query_to_queue(self):
         if self.current_query_type:
             logging.info(f'Sending query_type to data_sender queue: {self.current_query_type}')
-            self.queue_manager.send_message('client_request', self.current_query_type)
+            self.queue_manager.send_message_exchange('client_request', self.current_query_type)
+            
         
         else:
             logging.info(f'query_type was not setted')

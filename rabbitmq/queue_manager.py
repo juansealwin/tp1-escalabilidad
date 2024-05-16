@@ -3,7 +3,7 @@ import logging
 import time
 
 class QueueManager:
-    def __init__(self, connection=None, host='rabbitmq', single_channel = False):
+    def __init__(self, connection=None, host='rabbitmq', single_channel=False):
         self.host = host
         self.single_channel = single_channel
         self.__connect()
@@ -13,6 +13,8 @@ class QueueManager:
         self.worker_id = None
         self.is_leader = None
         self.total_workers = None
+
+        self.exchange_channel = None
         
         if not single_channel:
             self.channels = {}
@@ -42,7 +44,7 @@ class QueueManager:
 
     def setup_receive_queue(self, queue_name, callback, durable=True, auto_ack=False):
         if self.single_channel:
-            self.channel.queue_declare(queue_name,durable=durable)
+            self.channel.queue_declare(queue_name, durable=durable)
             self.channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=auto_ack)
         else:
             logging.debug("creating new channel")
@@ -50,6 +52,30 @@ class QueueManager:
             channel.queue_declare(queue=queue_name, durable=durable)
             channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=auto_ack)
             self.channels[queue_name] = channel
+
+    def setup_send_exchange(self, exchange):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange=exchange, exchange_type='fanout', durable=True)
+        self.exchange_channel = channel
+        
+
+    def setup_receive_exchange(self, exchange, callback, durable=True):
+        channel = self.connection.channel()
+
+        channel.exchange_declare(exchange=exchange, exchange_type='fanout', durable=durable)
+
+        result = channel.queue_declare(queue='', exclusive=True, durable=durable)
+        queue_name = result.method.queue
+        
+        channel.queue_bind(exchange=exchange, queue=queue_name)     
+
+        channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=False)
+
+        self.exchange_channel = channel
+
+
+    def send_message_exchange(self, exchange, message):
+        self.exchange_channel.basic_publish(exchange=exchange, routing_key='', body=message)
 
     def send_message(self, queue_name, message):
         if self.single_channel:
@@ -64,14 +90,18 @@ class QueueManager:
             else:
                 logging.error(f'send_message: Queue "{queue_name}" not found.')
 
-    def start_consuming(self, queue_name):
-        channel = self.channels.get(queue_name)
-        logging.debug(f'{channel}')
-        if channel:
-            logging.info(f'start consuming queue "{queue_name}"')
-            channel.start_consuming()
-        else:
-            logging.error(f'start_consuming: Queue "{queue_name}" not found.')
+    def start_consuming(self, queue_name, exchange=False):
+        if exchange:
+            self.exchange_channel.start_consuming()
+
+        else:    
+            channel = self.channels.get(queue_name)
+            logging.debug(f'{channel}')
+            if channel:
+                logging.info(f'start consuming queue "{queue_name}"')
+                channel.start_consuming()
+            else:
+                logging.error(f'start_consuming: Queue "{queue_name}" not found.')
             
 
     def setup_leader_queues(self, id, leader_id, total_workers, process_result):
@@ -130,5 +160,3 @@ class QueueManager:
             self.channel.start_consuming()
         except Exception as e:
             logging.error(f'start_consuming_sq: not in sq mode {e}')
-    
-

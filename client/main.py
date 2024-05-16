@@ -6,7 +6,3 @@ if __name__ == "__main__":
     client.send_query_to_queue()
     client.recv_result()
     
-
-    #send_books_process.join()
-    #send_rating_process.join()
-    #recv_result_process.join()

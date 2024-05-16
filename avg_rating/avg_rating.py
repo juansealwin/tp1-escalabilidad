@@ -13,9 +13,7 @@ class AvgRating:
     TOP_PERCENTILE = 0.1
 
     def __init__(self):
-        init_log() 
-        time.sleep(10)
-        
+        init_log()         
         self.queue_manager = QueueManager()
         self.__setup_queues()
         

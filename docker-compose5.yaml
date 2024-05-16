@@ -6,12 +6,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "15672:15672"  
-      - "5672:5672"  
+      - "5672:5672"      
 
-  client:
+  book_data_sender:
     build: 
       context: ./
-      dockerfile: ./client/Dockerfile
+      dockerfile: ./data_sender/Dockerfile
     restart: on-failure
     entrypoint: python3 /main.py
     depends_on:
@@ -21,13 +21,43 @@ services:
     volumes:
       - ./data:/data
     environment:
-      - BOOKS_DATA_FILE=data/books_data.csv
-      #- BOOKS_DATA_FILE=data/books_data_reduced.csv
-      - BOOKS_RATING_FILE=data/Books_rating.csv
-      #- BOOKS_RATING_FILE=data/books_rating_reduced.csv
-      #- BOOKS_DATA_FILE=data/test_avg_rating.csv
+      - QUEUE_NAME=books_data
+      - DATA_FILE=data/books_data_reduced.csv
+      #- DATA_FILE=data/books_data.csv
+      - LOG_LEVEL=INFO 
+
+  rating_data_sender:
+    build: 
+      context: ./
+      dockerfile: ./data_sender/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    volumes:
+      - ./data:/data
+    environment:
+      - QUEUE_NAME=rating_data
+      - DATA_FILE=data/books_rating_reduced.csv
+      #- DATA_FILE=data/Books_rating.csv
+      - LOG_LEVEL=INFO    
+
+  client:
+    build: 
+      context: ./
+      dockerfile: ./client/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - book_data_sender
+      - rating_data_sender
+    links: 
+      - rabbitmq
+    environment:
       - QUERY_TYPE=Query5
-      - LOG_LEVEL=INFO      
+      - LOG_LEVEL=INFO             
 
   column_filter:
     build: 
@@ -42,19 +72,6 @@ services:
     environment:
       - LOG_LEVEL=INFO  
 
-  avg_rating:
-    build: 
-      context: ./
-      dockerfile: ./avg_rating/Dockerfile
-    restart: on-failure
-    entrypoint: python3 /main.py
-    depends_on:
-      - rabbitmq
-    links: 
-      - rabbitmq
-    environment:
-      - LOG_LEVEL=INFO
-      
   sentiment_filter:
     build: 
       context: ./
@@ -67,3 +84,19 @@ services:
       - rabbitmq
     environment:
       - LOG_LEVEL=INFO
+
+  avg_rating:
+    build: 
+      context: ./
+      dockerfile: ./avg_rating/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO
+
+
+      
