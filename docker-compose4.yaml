@@ -133,6 +133,7 @@ services:
   #     - rabbitmq
   #   environment:
   #     - LOG_LEVEL=INFO
+  
   sentiment_filter:
     build: 
       context: ./

@@ -8,10 +8,10 @@ services:
       - "15672:15672"  
       - "5672:5672"  
 
-  client:
+  books_data_sender:
     build: 
       context: ./
-      dockerfile: ./client/Dockerfile
+      dockerfile: ./data_sender/Dockerfile
     restart: on-failure
     entrypoint: python3 /main.py
     depends_on:
@@ -21,13 +21,25 @@ services:
     volumes:
       - ./data:/data
     environment:
-      #- BOOKS_DATA_FILE=data/books_data.csv
-      - BOOKS_DATA_FILE=data/books_data_reduced.csv
-      #- BOOKS_RATING_FILE=data/Books_rating.csv
-      - BOOKS_RATING_FILE=data/books_rating_reduced.csv
-      #- BOOKS_DATA_FILE=data/test_avg_rating.csv
+      - QUEUE_NAME=books_data
+      #- DATA_FILE=data/books_data_reduced.csv
+      - DATA_FILE=data/books_data.csv
+      - LOG_LEVEL=INFO 
+
+  client:
+    build: 
+      context: ./
+      dockerfile: ./client/Dockerfile
+    restart: on-failure
+    depends_on:
+      - books_data_sender 
+    links: 
+      - rabbitmq
+    volumes:
+      - ./data:/data
+    environment:
       - QUERY_TYPE=Query2
-      - LOG_LEVEL=INFO      
+      - LOG_LEVEL=INFO 
 
   decade_filter_1:
     build: 
@@ -74,5 +86,4 @@ services:
     environment:
       - LOG_LEVEL=INFO
       - TOTAL_WORKERS=2
-      - MIN_REVIEWS=5
 
