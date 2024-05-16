@@ -1,124 +1,53 @@
 import os
-import pika
-import time
 import logging
-import csv
-import os
-from configparser import ConfigParser
+import socket
+import time
 from common.log import init_log
 from common.protocol import QueryType
-from rabbitmq.queue_manager import *
+
 
 class Client:
     def __init__(self):
-        init_log()
-        self.config = self.__init_config()
-        time.sleep(10)
-        self.received_results = 0 
-
-        self.queue_manager = QueueManager()
-
-        # Queue to send books_data
-        self.queue_manager.setup_send_queue('books_data')
-        # Queue to send rating_data
-        self.queue_manager.setup_send_queue('rating_data')
-
-        # Queue to receive result
-        self.queue_manager.setup_receive_queue('result', self.__process_result)
-
-
+        self.__init_config()
+        self.server_address = ('localhost', 12345)
+        self.total_responses = 0 
 
     def __init_config(self):
         init_log()
 
-        """ Parse env variables or config file to find program config params"""
-        config = ConfigParser(os.environ)
-    
-        config_params = {}
-        try:
-            config_params["books_data_file"] = os.getenv('BOOKS_DATA_FILE', config["DEFAULT"]["BOOKS_DATA_FILE"])
-            config_params["books_rating_file"] = os.getenv('BOOKS_RATING_FILE', config["DEFAULT"]["BOOKS_RATING_FILE"])
-            config_params["query_type"] = os.getenv('QUERY_TYPE', config["DEFAULT"]["QUERY_TYPE"])
+        self.query_type = os.getenv('QUERY_TYPE')
+        if not QueryType.validate_query_type(self.query_type):
+            raise ValueError(f"Invalid query_type: {self.query_type}")
 
-        except KeyError as e:
-            raise KeyError("Key was not found. Error: {} .Aborting client".format(e))
+    def request_query(self):
 
-        except ValueError as e:
-            raise ValueError("Key could not be parsed. Error: {}. Aborting client".format(e))
+        while True:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        return config_params
+            try:
+                logging.info("Intentando conectarme....")
+                client_socket.connect(self.server_address)
+                logging.info("Me conecte")
+                client_socket.sendall(self.query_type.encode())
+                self.recv_response(client_socket)
 
+            except ConnectionRefusedError:
+                logging.error("Connection refused. Make sure the server is running.")
+                time.sleep(2)
+                continue
 
-    def __process_result(self, ch, method, properties, body):
-        line = body.decode('utf-8')
-        logging.info(f"[x] Received {line}")    
-
-        if line == "END":
-            logging.info(f"Total results received: {self.received_results}")
-            logging.info("Received END message. Exiting...")
-            os._exit(0)
-        else:
-            self.received_results = self.received_results + 1
-
-    def __filter_book_data_line(self, line):
-        # Books data header: 
-        # 'Title,description,authors,image,previewLink,publisher,publishedDate,infoLink,categories,ratingsCount'
-        # Discard fileds descripcion[1], image[3], previewLink[4], infoLink[7]
-        filtered_fields = [line[0], line[2], line[5], line[6], line[8], line[9]]
-        filtered_line = '|'.join(filtered_fields)
-        return filtered_line
-
-    def __filter_rating_data_line(self, line):
-        # Ratings data header: 
-        # 'Id, Title, Price, User_id, ProfileName, review/helpfulness, review/score, review/time, review/summary, review/text'
-        # Discard fileds Id[0], Price[2], ProfileName[4], review/time[7]
-        filtered_fields = [line[1], line[3], line[5], line[6], line[8], line[9]]
-        filtered_line = '|'.join(filtered_fields)
-        return filtered_line
-
-    def send_books_data(self):
-
-        file_name = self.config["books_data_file"]
-        query_type = str(self.config["query_type"])
-
-        if os.path.isfile(file_name):
-            with open(file_name, 'r', encoding='utf-8') as file:
-                # Discard header
-                reader = csv.reader(file)
-                next(reader)
-
-                if query_type == QueryType.QUERY1 or query_type == QueryType.QUERY3:
-                    logging.info(f"{query_type}")
-                    self.queue_manager.send_message('books_data', "Query3")
-                #if query_type == QueryType.QUERY1.value:
-                #self.queue_manager.send_message('books_data', query_type)
-
-                for line in reader:
-                    msg = self.__filter_book_data_line(line)
-                    self.queue_manager.send_message('books_data', msg)
-
-                self.queue_manager.send_message('books_data', "END") 
-
-        else:
-            logging.info(f' [!] File not found: {file_name}')
+            finally:
+                client_socket.close()
 
 
-    def send_rating_data(self):
-        file_name = self.config["books_rating_file"]
-        if os.path.isfile(file_name):
-            with open(file_name, 'r', encoding='utf-8') as file:
-                # Discard header
-                reader = csv.reader(file)
-                next(reader)
-                for line in reader:
-                    msg = self.__filter_rating_data_line(line)
-                    self.queue_manager.send_message('rating_data', msg)
-                self.queue_manager.send_message('rating_data', "END")
+    def recv_response(self, client_socket):
+        logging.info("Waiting for response from server...")
+        while True:
+            response = client_socket.recv(1024).decode()
+            logging.info("Response from server:", response)
+            self.total_responses += 1
 
-        else:
-            logging.info(f' [!] File not found: {file_name}')
-        logging.info(f'finished rating queue')
-        
-    def recv_result(self):
-        logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.queue_manager.start_consuming('result')
+            if response == "END":
+                logging.info(f"Received a total of {self.total_responses} responses. Exiting...")
+                break
+

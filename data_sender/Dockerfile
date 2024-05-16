@@ -1,8 +1,8 @@
 FROM python:3.9.7-slim
 RUN pip install --upgrade pip && pip3 install pika
 
-COPY client /
+COPY data_sender /
 COPY common /common
 COPY rabbitmq /rabbitmq
 
-ENTRYPOINT ["python3", "main.py"]
+CMD ["python", "./main.py"]
