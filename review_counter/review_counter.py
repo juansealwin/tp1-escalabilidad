@@ -16,7 +16,6 @@ class ReviewCounter():
         self.counter = {}
         
         self.__init_config()
-        time.sleep(10)
         self.queue_manager = QueueManager(single_channel=True)
         self.__setup_queues()
         signal.signal(signal.SIGTERM, self.handle_sigterm)

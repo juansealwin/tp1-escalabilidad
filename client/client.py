@@ -10,7 +10,6 @@ from common.protocol import QueryType
 class Client:
     def __init__(self):
         self.__init_config()
-        time.sleep(10)
         self.queue_manager = QueueManager()
         
         self.received_results = 0

@@ -19,7 +19,6 @@ class Joiner:
     def __init__(self):
         
         self.__init_config()
-        time.sleep(10)
         self.counter = {}
         self.queue = multiprocessing.Queue()
 

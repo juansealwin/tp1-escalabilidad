@@ -30,7 +30,7 @@ class QueueManager:
                 break
             except pika.exceptions.AMQPConnectionError:
                 logging.info(' [!] RabbitMQ not available yet, waiting...')
-                time.sleep(2)
+                time.sleep(3)
 
         logging.info(' [*] Connected to RabbitMQ')        
 
