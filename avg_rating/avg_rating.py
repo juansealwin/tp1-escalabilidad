@@ -1,3 +1,4 @@
+import signal
 import pika
 import time
 import logging
@@ -19,6 +20,7 @@ class AvgRating:
         
         self.titles_rating = []
         self.current_query_type = None
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
 
 
     def __setup_queues(self):
@@ -111,6 +113,12 @@ class AvgRating:
             msg = f"{title},{ratio}"
             self.queue_manager.send_message('result', msg) 
 
+    def handle_sigterm(self, signum, frame):
+        logging.info('action: handle_sigterm | result: in_progress')
+        self.shutdown_requested = True
+        self.queue_manager.stop_consuming_all()
+        logging.info('action: handle_sigterm | result: success')
+        
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
         self.queue_manager.start_consuming('avg_rating_data')

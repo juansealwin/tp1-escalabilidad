@@ -58,7 +58,7 @@ class SentimentFilter():
 
     def __process_rating_data_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
-        logging.info(f"sentiment_filter {line}")
+        logging.debug(f"sentiment_filter {line}")
 
         
         if self.current_query_type is None:
@@ -136,8 +136,10 @@ class SentimentFilter():
 
 
     def handle_sigterm(self, signum, frame):
-        logging.debug('action: handle_sigterm | result: in_progress')
+        logging.info('action: handle_sigterm | result: in_progress')
         self.shutdown_requested = True
+        self.queue_manager.stop_consuming_all()
+        logging.info('action: handle_sigterm | result: success')
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')

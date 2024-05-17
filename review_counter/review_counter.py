@@ -44,7 +44,8 @@ class ReviewCounter():
     def __process_message(self, ch, method, properties, body):
         if self.shutdown_requested:
             return
-        
+
+            
         line = body.decode('utf-8')
         
         if line == "END":
@@ -101,8 +102,11 @@ class ReviewCounter():
         self.queue_manager.send_message('review_counter',f"END")
 
     def handle_sigterm(self, signum, frame):
-        logging.debug('action: handle_sigterm | result: in_progress')
+        logging.info('action: handle_sigterm | result: in_progress')
         self.shutdown_requested = True
+        self.queue_manager.stop_consuming_sq()
+        logging.info('action: handle_sigterm | result: success')
+
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')

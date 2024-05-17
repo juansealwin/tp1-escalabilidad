@@ -101,8 +101,10 @@ class DecadeFilter():
 
 
     def handle_sigterm(self, signum, frame):
-        logging.debug('action: handle_sigterm | result: in_progress')
+        logging.info('action: handle_sigterm | result: in_progress')
         self.shutdown_requested = True
+        self.queue_manager.stop_consuming_all()
+        logging.info('action: handle_sigterm | result: success')
 
 
     def run(self):

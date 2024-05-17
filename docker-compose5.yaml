@@ -22,8 +22,8 @@ services:
       - ./data:/data
     environment:
       - QUEUE_NAME=books_data
-      - DATA_FILE=data/books_data_reduced.csv
-      #- DATA_FILE=data/books_data.csv
+      #- DATA_FILE=data/books_data_reduced.csv
+      - DATA_FILE=data/books_data.csv
       - LOG_LEVEL=INFO 
 
   rating_data_sender:
@@ -40,8 +40,8 @@ services:
       - ./data:/data
     environment:
       - QUEUE_NAME=rating_data
-      - DATA_FILE=data/books_rating_reduced.csv
-      #- DATA_FILE=data/Books_rating.csv
+      #- DATA_FILE=data/books_rating_reduced.csv
+      - DATA_FILE=data/Books_rating.csv
       - LOG_LEVEL=INFO    
 
   client:

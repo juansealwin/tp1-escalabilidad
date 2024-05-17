@@ -1,3 +1,4 @@
+import signal
 import pika, time, logging, os
 from common.log import init_log
 from common.protocol import QueryType
@@ -18,6 +19,9 @@ class ColumnFilter:
         self.__setup_queues()
 
         self.current_query_type = None
+        
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
+
 
 
     def __setup_queues(self):
@@ -128,7 +132,11 @@ class ColumnFilter:
             #logging.info(f" [x] column_filter sending: {fields[self.TITLE_POS]}")
             self.queue_manager.send_message('fiction_books', f"{fields[self.TITLE_POS]}")
             
-        
+    def handle_sigterm(self, signum, frame):
+        logging.debug('action: handle_sigterm | result: in_progress')
+        self.shutdown_requested = True
+        self.queue_manager.stop_consuming_all()
+        logging.debug('action: handle_sigterm | result: success')
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')

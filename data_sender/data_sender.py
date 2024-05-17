@@ -1,4 +1,5 @@
 import os
+import signal
 import time
 import logging
 import csv
@@ -47,6 +48,9 @@ class DataSender:
         self.queue_manager.setup_receive_exchange('client_request', self.__process_result)
 
         self.current_query_type = None
+
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
+
 
     def __init_config(self):
         init_log()
@@ -112,7 +116,13 @@ class DataSender:
                 self.queue_manager.send_message(self.queue_name, "END") 
         else:
             logging.info(f' [!] File not found: {self.file_name}')
-            
+    
+    def handle_sigterm(self, signum, frame):
+        logging.info('action: handle_sigterm | result: in_progress')
+        self.shutdown_requested = True
+        self.queue_manager.stop_consuming_all()
+        logging.info('action: handle_sigterm | result: success')
+
 
     def recv_request(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')

@@ -31,7 +31,7 @@ class Joiner:
         self.queue_manager = QueueManager()
 
         self.__setup_queues()
-
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
         self.event = multiprocessing.Event()
 
     def __init_config(self):
@@ -191,6 +191,11 @@ class Joiner:
         self.new_queueManager.setup_receive_queue('book_joiner', callback=self.__process_book_message,auto_ack=True, durable=True)
         self.new_queueManager.start_consuming('book_joiner')
 
+    def handle_sigterm(self, signum, frame):
+        logging.info('action: handle_sigterm | result: in_progress')
+        self.shutdown_requested = True
+        self.queue_manager.stop_consuming_all()
+        logging.info('action: handle_sigterm | result: success')
     
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')

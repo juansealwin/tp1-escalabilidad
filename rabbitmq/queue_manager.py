@@ -155,8 +155,19 @@ class QueueManager:
         else:
             logging.error(f'start_consuming: Queue "{queue_name}" not found.')
 
+    def stop_consuming_all(self):
+        for queue,channel in self.channels.items():
+            channel.stop_consuming()
+
+
     def start_consuming_sq(self):
         try:
             self.channel.start_consuming()
+        except Exception as e:
+            logging.error(f'start_consuming_sq: not in sq mode {e}')
+
+    def stop_consuming_sq(self):
+        try:
+            self.channel.stop_consuming()
         except Exception as e:
             logging.error(f'start_consuming_sq: not in sq mode {e}')
