@@ -105,7 +105,7 @@ class DataSender:
                 self.queue_manager.send_message(self.queue_name, self.current_query_type)
 
                 for line in reader:
-                    msg = self.__filter_data_line(line, self.RATING_FIELDS_MAP)
+                    msg = self.__filter_data_line(line, self.fields_map)
                     self.queue_manager.send_message(self.queue_name, msg)
 
                 self.queue_manager.send_message(self.queue_name, "END") 

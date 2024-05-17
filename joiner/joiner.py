@@ -14,6 +14,7 @@ class Joiner:
     COUNT_POS = 1
     RATING_POS = 2
     MIN_DIFF_DECADES = 9
+    SCORE_POS = 2
 
     def __init__(self):
         
@@ -50,6 +51,9 @@ class Joiner:
 
         # Queue to send result
         self.queue_manager.setup_send_queue('result')
+
+        self.queue_manager.setup_send_queue('avg_rating_data')
+
 
 
     def __set_current_query_type(self, line):
@@ -128,14 +132,16 @@ class Joiner:
     def __process_message_query3(self, line):
         fields = line.split('|')
         logging.debug(f" [x] Received {line}")
-        
+
         title = fields[self.TITLE_POS]
-        count_info = self.counter.get(title, [0, 0])
-        current_count = count_info[0]
+        count = int(fields[self.COUNT_POS])
+        score = float(fields[self.SCORE_POS]) 
 
-        updated_count = current_count + int(fields[self.COUNT_POS])
-
-        self.counter[title] = [updated_count, count_info[1]]
+        if title in self.counter:
+            self.counter[title][0] += count
+            self.counter[title][1] += score
+        else:
+            self.counter[title] = [count, score]
         return
     
     
@@ -147,20 +153,30 @@ class Joiner:
     def __process_book_message(self, ch, method, properties, body):
         line = body.decode('utf-8')
         fields = line.split('|')
-        logging.info(f" [x] Received {body}")
-        
+
+        if self.current_query_type is None:
+            self.current_query_type = QueryType.validate_query_type(line)
+            if self.current_query_type == QueryType.QUERY4.value:
+                self.queue_manager.send_message('avg_rating_data',self.current_query_type)
+
         if line == 'END':
+            logging.info('sending end')
             self.counter = {}
             self.finished_workers = 0
-            self.queue_manager.send_message('result','END')
+            if self.current_query_type == QueryType.QUERY3.value:
+                self.queue_manager.send_message('result','END')
+            else:
+                logging.info('sending end')
+                self.queue_manager.send_message('avg_rating_data','END')
             return
         
         #if self.current_query_type == QueryType.QUERY3.value:
-        count = self.counter.get(fields[self.TITLE_POS], [0])[0]
-        
+        count,score = self.counter.get(fields[self.TITLE_POS], [0,0])
         if count >= self.min_reviews:
-            self.queue_manager.send_message('result', f"{fields[self.TITLE_POS]},{count}")
-
+            if self.current_query_type == QueryType.QUERY3.value:
+                self.queue_manager.send_message('result', f"{fields[self.TITLE_POS]}|{fields[self.AUTHOR_POS]}|{count}")
+            else:
+                self.queue_manager.send_message('avg_rating_data', f"{fields[self.TITLE_POS]}|{count}|{score}")
     
 
     def consume_books(self):
@@ -169,6 +185,7 @@ class Joiner:
         logging.debug("aquired book")
         self.counter = self.queue.get()
         self.new_queueManager= QueueManager()
+        self.current_query_type = None
         self.new_queueManager.setup_receive_queue('book_joiner', callback=self.__process_book_message,auto_ack=True, durable=True)
         self.new_queueManager.start_consuming('book_joiner')
 

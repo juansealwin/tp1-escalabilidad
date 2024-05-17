@@ -40,6 +40,8 @@ class ColumnFilter:
         
         if self.current_query_type is None:
             self.current_query_type = QueryType.validate_query_type(line)
+            if self.current_query_type == QueryType.QUERY3.value or self.current_query_type == QueryType.QUERY4.value:
+                self.queue_manager.send_message('book_joiner',self.current_query_type)
 
         elif line == "END":
             if self.current_query_type == QueryType.QUERY1.value:
@@ -59,7 +61,6 @@ class ColumnFilter:
                 self.__process_message_query3_4(fields)
             elif self.current_query_type == QueryType.QUERY4.value:
                 self.__process_message_query3_4(fields)
-                self.__process_message_query4(fields)
             elif self.current_query_type == QueryType.QUERY5.value:
                 self.__process_message_query5(fields)                
             else:

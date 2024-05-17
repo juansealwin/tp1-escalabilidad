@@ -8,8 +8,8 @@ from rabbitmq.queue_manager import QueueManager
 
 class AvgRating:
     TITLE_POS = 0
-    TOT_REVIEWS_POS = 2
-    TOT_SCORE_POS = 1 
+    TOT_REVIEWS_POS = 1
+    TOT_SCORE_POS = 2
     TOP_PERCENTILE = 0.1
 
     def __init__(self):
