@@ -8,10 +8,10 @@ services:
       - "15672:15672"  
       - "5672:5672"  
 
-  client:
+  books_data_sender:
     build: 
       context: ./
-      dockerfile: ./client/Dockerfile
+      dockerfile: ./data_sender/Dockerfile
     restart: on-failure
     depends_on:
       - rabbitmq 
@@ -40,25 +40,22 @@ services:
       - QUEUE_NAME=books_data
       #- DATA_FILE=data/books_data_reduced.csv
       - DATA_FILE=data/books_data.csv
-      - LOG_LEVEL=INFO            
-  
-    data_sender:
-      build: 
-        context: ./
-        dockerfile: ./data_sender/Dockerfile
-      restart: on-failure
-      entrypoint: python3 /main.py
-      depends_on:
-        - rabbitmq
-      links: 
-        - rabbitmq
-      volumes:
-        - ./data:/data
-      environment:
-        - QUEUE_NAME=
-        #- DATA_FILE=data/books_data_reduced.csv
-        - DATA_FILE=data/books_data.csv
-        - LOG_LEVEL=INFO        
+      - LOG_LEVEL=INFO 
+
+  client:
+    build: 
+      context: ./
+      dockerfile: ./client/Dockerfile
+    restart: on-failure
+    depends_on:
+      - books_data_sender 
+    links: 
+      - rabbitmq
+    volumes:
+      - ./data:/data
+    environment:
+      - QUERY_TYPE=Query2
+      - LOG_LEVEL=INFO 
 
   column_filter:
     build: 
@@ -71,4 +68,38 @@ services:
     links: 
       - rabbitmq
     environment:
-      - LOG_LEVEL=INFO  
+      - LOG_LEVEL=INFO 
+      - TOTAL_WORKERS=2
+      - LEADER=0
+      - ID=0 
+
+  decade_filter_2:
+    build: 
+      context: ./
+      dockerfile: ./decade_filter/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO 
+      - TOTAL_WORKERS=2
+      - LEADER=0
+      - ID=1 
+
+  joiner:
+    build: 
+      context: ./
+      dockerfile: ./joiner/Dockerfile
+    restart: on-failure
+    entrypoint: python3 /main.py
+    depends_on:
+      - rabbitmq
+    links: 
+      - rabbitmq
+    environment:
+      - LOG_LEVEL=INFO
+      - TOTAL_WORKERS=2
+

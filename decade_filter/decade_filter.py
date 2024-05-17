@@ -14,7 +14,6 @@ class DecadeFilter():
 
     def __init__(self):
         self.__init_config()
-        time.sleep(10)
 
         self.author_decades = {}
 
@@ -33,7 +32,7 @@ class DecadeFilter():
 
     def __setup_queues(self):
         # Queue to receive books_data
-        self.queue_manager.setup_receive_queue('books_data_1', self.__process_message)
+        self.queue_manager.setup_receive_queue('books_data', self.__process_message)
 
         # Queue to send books_data
         self.queue_manager.setup_send_queue('authors_and_decades')
@@ -108,4 +107,4 @@ class DecadeFilter():
 
     def run(self):
         logging.info(' [*] Waiting for messages. To exit press CTRL+C')
-        self.queue_manager.start_consuming('books_data_1')
+        self.queue_manager.start_consuming('books_data')

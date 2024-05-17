@@ -72,7 +72,9 @@ class Joiner:
 
         # Decode the msg
         line = body.decode('utf-8')
-        #logging.info(f"Joiner: {line}") 
+        
+        logging.info(f"Joiner: {line}") 
+        
         if self.current_query_type is None:
             self.__set_current_query_type(line)
         

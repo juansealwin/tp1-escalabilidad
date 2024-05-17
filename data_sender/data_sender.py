@@ -101,8 +101,9 @@ class DataSender:
                 reader = csv.reader(file)
                 next(reader)
 
-                logging.info(f"Sending in queue: {self.queue_name} the request: {self.current_query_type}")
-                self.queue_manager.send_message(self.queue_name, self.current_query_type)
+                if self.current_query_type != QueryType.QUERY2.value:
+                    logging.info(f"Sending in queue: {self.queue_name} the request: {self.current_query_type}")
+                    self.queue_manager.send_message(self.queue_name, self.current_query_type)
 
                 for line in reader:
                     msg = self.__filter_data_line(line, self.fields_map)
