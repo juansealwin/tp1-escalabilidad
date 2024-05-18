@@ -32,15 +32,15 @@ class Client:
 
     def __process_result(self, ch, method, properties, body):
         line = body.decode('utf-8')
-        logging.info(f"[x] Received {line}")    
 
-        if line == "END":
-            logging.info(f"Total results received: {self.received_results}")
-            logging.info("Received END message. Exiting...")
-            os._exit(0)
+        if line != "END":
+            logging.info(f"[x] Received {line}")
+            self.received_results = self.received_results + 1    
 
         else:
-            self.received_results = self.received_results + 1
+            logging.info(f"Total results received: {self.received_results}")
+            logging.info("Received END message. Exiting...")
+            os._exit(0)            
 
 
     def send_query_to_queue(self):

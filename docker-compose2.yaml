@@ -13,22 +13,6 @@ services:
       context: ./
       dockerfile: ./data_sender/Dockerfile
     restart: on-failure
-    depends_on:
-      - rabbitmq 
-    links: 
-      - rabbitmq
-    volumes:
-      - ./data:/data
-    environment:
-      - QUERY_TYPE=Query1
-      - LOG_LEVEL=INFO    
-
-
-  data_sender:
-    build: 
-      context: ./
-      dockerfile: ./data_sender/Dockerfile
-    restart: on-failure
     entrypoint: python3 /main.py
     depends_on:
       - rabbitmq
@@ -57,10 +41,10 @@ services:
       - QUERY_TYPE=Query2
       - LOG_LEVEL=INFO 
 
-  column_filter:
+  decade_filter_1:
     build: 
       context: ./
-      dockerfile: ./column_filter/Dockerfile
+      dockerfile: ./decade_filter/Dockerfile
     restart: on-failure
     entrypoint: python3 /main.py
     depends_on:

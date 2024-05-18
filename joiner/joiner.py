@@ -71,21 +71,17 @@ class Joiner:
 
         # Decode the msg
         line = body.decode('utf-8')
-        
-        logging.info(f"Joiner: {line}") 
-        
+                
         if self.current_query_type is None:
             self.__set_current_query_type(line)
         
-        # TODO: change for each type of query    
         elif line == "END":
-            logging.info(f"Joiner: END arrived...") 
+
             if (self.total_input_workers - 1) == self.finished_workers:
                 if self.current_query_type == QueryType.QUERY2.value:
-                    logging.info(f"Joiner: starting proccesing result of Query2...") 
                     self.__process_result_query2() 
+
                 else:
-                    logging.info(f"Joiner: starting proccesing result of Query3...") 
                     self.__process_books()
 
             else:    
