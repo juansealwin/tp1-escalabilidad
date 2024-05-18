@@ -10,7 +10,7 @@ from common.protocol import QueryType
 class Client:
     def __init__(self):
         self.__init_config()
-        self.queue_manager = QueueManager()
+        self.queue_manager = QueueManager(retry_time=10)
         
         self.received_results = 0
 

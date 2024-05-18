@@ -3,10 +3,10 @@ import logging
 import time
 
 class QueueManager:
-    def __init__(self, connection=None, host='rabbitmq', single_channel=False):
+    def __init__(self, connection=None, host='rabbitmq', single_channel=False, retry_time=3):
         self.host = host
         self.single_channel = single_channel
-        self.__connect()
+        self.__connect(retry_time)
         
         # To be used only in the case of multiple workers
         self.process_result = None
@@ -22,7 +22,7 @@ class QueueManager:
             self.channel = self.connection.channel()
 
 
-    def __connect(self):
+    def __connect(self, retry_time=3):
         logging.info(' [*] Waiting for RabbitMQ to start...')
         while True:
             try:
@@ -30,7 +30,7 @@ class QueueManager:
                 break
             except pika.exceptions.AMQPConnectionError:
                 logging.info(' [!] RabbitMQ not available yet, waiting...')
-                time.sleep(3)
+                time.sleep(retry_time)
 
         logging.info(' [*] Connected to RabbitMQ')        
 
